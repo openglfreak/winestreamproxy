@@ -49,30 +49,39 @@ if ! [ x"${base_dir+set}"x = x'set'x ]; then
     fi
 fi
 
-find_wine() {
+# Function that can be used to check if a program is in the PATH.
+# shellcheck disable=SC2015
+is_in_path() {
     # POSIX.
-    WINE="$(command -v wine 2>/dev/null)" && return
-    WINE="$(type -p wine)" && : "${WINE=wine}" && return
-    WINE="$(hash wine && echo wine)" && return
+    command -v "$1" >/dev/null 2>&1 && return || :
+    type -p "$1" >/dev/null 2>&1 && return || :
+    hash "$1" >/dev/null 2>&1 && return || :
     # Non-POSIX.
     # shellcheck disable=SC2230
-    WINE="$(which wine 2>/dev/null)" && return
-    WINE="$(wine --version >/dev/null 2>&1 && echo wine)" && return
+    which "$1" >/dev/null 2>&1 && return || :
     # Not found.
     return 1
 }
+
 # Find wine executable path.
 # shellcheck disable=SC1011,SC2026
-if ! [ x"${WINE+set}"x = x'set'x ]; then
-    if ! find_wine; then
-        printf 'error: Wine not found\n' >&2
+if [ x"${WINE+set}"x = x'set'x ]; then
+    wine="${WINE}"
+else
+    if [ x"$WINEARCH"x = x'win64'x ] && \
+       { is_in_path wine64 || wine64 --version > /dev/null 2>&1; }; then
+        wine=wine64
+    elif is_in_path wine || wine --version > /dev/null 2>&1; then
+        wine=wine
+    else
+        # shellcheck disable=SC2016
+        printf 'error: $WINE not set and Wine binary not found\n' >&2
         exit 1
     fi
-    export WINE
     # shellcheck disable=SC2016
-    printf 'warning: $WINE not set, using %s\n' "${WINE}" >&2
+    printf 'warning: $WINE not set, using "%s"\n' "${WINE}" >&2
 fi
 
 # Start winestreamproxy in the background and wait until the pipe server loop is running.
-{ nohup "${WINE}" "${base_dir}/${exe_name}" "${pipe_name}" "${socket_path}" </dev/null & } | \
+setsid setsid "${wine}" "${base_dir}/${exe_name}" "${pipe_name}" "${socket_path}" | \
 LC_ALL=C grep -q -m 1 -F 'Started pipe server loop'
