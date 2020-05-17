@@ -23,7 +23,7 @@ CFLAGS := $(CFLAGS) -include stdarg.h # Work around Wine headers bug in 32-bit m
 
 sources := src/main/main.c src/main/service.c src/main/standalone.c src/main/wide_to_narrow.c \
            src/proxy/dbg_output_bytes.c src/proxy/logger.c src/proxy/loop.c src/proxy/name_to_path.c \
-           src/proxy/pipe_handler.c src/proxy/pipe.c src/proxy/proxy.c src/proxy/socket_handler.c src/proxy/socket.c \
+           src/proxy/pipe.c src/proxy/pipe_handler.c src/proxy/proxy.c src/proxy/socket.c src/proxy/socket_handler.c \
            src/proxy/wait_thread.c
 headers := include/winestreamproxy/logger.h include/winestreamproxy/winestreamproxy.h src/main/service.h \
            src/main/standalone.h src/main/wide_to_narrow.h src/proxy/connection.h src/proxy/dbg_output_bytes.h \
