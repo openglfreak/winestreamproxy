@@ -1,3 +1,4 @@
+#!/usr/bin/make -f
 # Copyright (C) 2020 Torge Matthies
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
