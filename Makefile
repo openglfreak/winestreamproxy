@@ -36,7 +36,7 @@ winestreamproxy.exe.so: $(sources) $(headers) Makefile
 	$(WINEGCC) $(RELEASE_CFLAGS) $(LDFLAGS) -o winestreamproxy.exe.so $(filter-out $(main_file),$(sources)) $(main_file)
 	$(OBJCOPY) --only-keep-debug winestreamproxy.exe.so winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded winestreamproxy.exe.so
-	$(OBJCOPY) --add-gnu-debuglink="${PWD}/winestreamproxy.exe.dbg.o" winestreamproxy.exe.so
+	$(OBJCOPY) --add-gnu-debuglink="$${PWD:-$$(pwd)}/winestreamproxy.exe.dbg.o" winestreamproxy.exe.so
 
 winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
 	$(WINEGCC) $(DEBUG_CFLAGS) $(LDFLAGS) -o winestreamproxy-debug.exe.so $(filter-out $(main_file),$(sources)) $(main_file)
@@ -44,5 +44,6 @@ winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
 clean:
 	$(RM) winestreamproxy.exe.so
 	$(RM) winestreamproxy-debug.exe.so
+	$(RM) winestreamproxy.exe.dbg.o
 
 .PHONY: all clean
