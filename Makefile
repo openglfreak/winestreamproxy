@@ -30,7 +30,11 @@ headers := include/winestreamproxy/logger.h include/winestreamproxy/winestreampr
            src/proxy/pipe.h src/proxy/proxy.h src/proxy/socket.h src/proxy/wait_thread.h
 main_file := src/main/main.c
 
-all: winestreamproxy.exe.so
+all: release
+
+release: winestreamproxy.exe.so
+
+debug: winestreamproxy-debug.exe.so
 
 winestreamproxy.exe.so: $(sources) $(headers) Makefile
 	$(WINEGCC) $(RELEASE_CFLAGS) $(LDFLAGS) -o winestreamproxy.exe.so $(filter-out $(main_file),$(sources)) $(main_file)
@@ -46,4 +50,4 @@ clean:
 	$(RM) winestreamproxy-debug.exe.so
 	$(RM) winestreamproxy.exe.dbg.o
 
-.PHONY: all clean
+.PHONY: all release debug clean
