@@ -178,7 +178,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     if (!service_exit_event)
         return;
 
-    if (!create_proxy(logger, paths, service_exit_event, &proxy))
+    if (!create_proxy(logger, paths, service_exit_event, 0, &proxy))
     {
         service_set_status_stopped(logger);
         return;

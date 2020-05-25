@@ -20,6 +20,7 @@
 #include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
+#include <wincon.h>
 #include <winnt.h>
 
 static TCHAR const* const log_level_prefixes[] = {
@@ -42,6 +43,13 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
               log_level_prefixes[level], (TCHAR const*)message);
 
     return 1;
+}
+
+void running_callback(proxy_data* const proxy)
+{
+    (void)proxy;
+
+    FreeConsole();
 }
 
 int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
@@ -91,7 +99,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
     if (!exit_event)
         return 1;
 
-    if (!create_proxy(logger, paths, exit_event, &proxy))
+    if (!create_proxy(logger, paths, exit_event, running_callback, &proxy))
         return 1;
 
     enter_proxy_loop(proxy);

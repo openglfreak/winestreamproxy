@@ -35,10 +35,11 @@ typedef struct connection_list_entry {
 struct proxy_data {
     logger_instance* logger;
     connection_paths paths;
+    HANDLE exit_event;
+    proxy_running_callback running_callback;
     OVERLAPPED connect_overlapped;
     connection_list_entry* connections_start;
     connection_list_entry* connections_end;
-    HANDLE exit_event;
     char volatile running[((32 + CHAR_BIT - 1) / CHAR_BIT) - 1 + sizeof(LONG)];
 };
 

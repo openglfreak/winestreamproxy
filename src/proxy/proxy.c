@@ -18,8 +18,8 @@
 #include <winbase.h>
 #include <winnt.h>
 
-BOOL create_proxy(logger_instance* const logger, connection_paths const paths,
-                  HANDLE const exit_event, proxy_data** const out_proxy)
+BOOL create_proxy(logger_instance* const logger, connection_paths const paths, HANDLE const exit_event,
+                  proxy_running_callback const running_callback, proxy_data** const out_proxy)
 {
     proxy_data* proxy;
 
@@ -35,6 +35,7 @@ BOOL create_proxy(logger_instance* const logger, connection_paths const paths,
     proxy->logger = logger;
     proxy->paths = paths;
     proxy->exit_event = exit_event;
+    proxy->running_callback = running_callback;
 
     proxy->connect_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!proxy->connect_overlapped.hEvent)
