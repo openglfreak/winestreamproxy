@@ -107,7 +107,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
     destroy_proxy(proxy);
     CloseHandle(exit_event);
 #ifdef _UNICODE
-    HeapFree(GetProcessHeap(), paths.unix_socket_path);
+    HeapFree(GetProcessHeap(), 0, (char*)paths.unix_socket_path);
 #endif
     if (deallocate_pipe_path)
         deallocate_path(paths.named_pipe_path);

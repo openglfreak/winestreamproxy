@@ -66,9 +66,11 @@ extern void log_get_file_and_line(void const** file, long* line);
     (LOG_IS_ENABLED(logger, level) ? ( \
         log_init_message((logger), (level), __FILE__, __LINE__) ? log_print_message message : 0 \
     ) : 1)
+#define LOG_MAKE_WIDE_STR2(x) L ## x
+#define LOG_MAKE_WIDE_STR(x) LOG_MAKE_WIDE_STR2(x)
 #define LOG_WIDE(logger, level, message) \
     (LOG_IS_ENABLED(logger, level) ? ( \
-        wlog_init_message((logger), (level), L __FILE__, __LINE__) ? wlog_print_message message : 0 \
+        wlog_init_message((logger), (level), LOG_MAKE_WIDE_STR(__FILE__), __LINE__) ? wlog_print_message message : 0 \
     ) : 1)
 #ifdef _UNICODE
 #define LOG(logger, level, message) LOG_WIDE(logger, level, message)
