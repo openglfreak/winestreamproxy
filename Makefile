@@ -34,7 +34,6 @@ sources := src/main/main.c src/main/service.c src/main/standalone.c src/main/wid
 headers := include/winestreamproxy/logger.h include/winestreamproxy/winestreamproxy.h src/main/service.h \
            src/main/standalone.h src/main/wide_to_narrow.h src/proxy/connection.h src/proxy/dbg_output_bytes.h \
            src/proxy/pipe.h src/proxy/proxy.h src/proxy/socket.h src/proxy/wait_thread.h
-main_file := src/main/main.c
 
 all: release
 
