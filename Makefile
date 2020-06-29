@@ -41,7 +41,7 @@ release: winestreamproxy.exe.so
 
 debug: winestreamproxy-debug.exe.so
 
-winestreamproxy.exe.so: $(sources) $(headers) Makefile
+winestreamproxy.exe.so winestreamproxy.exe.dbg.o: $(sources) $(headers) Makefile
 	$(WINEGCC) $(RELEASE_CFLAGS) $(RELEASE_LDFLAGS) -o winestreamproxy.exe.so $(sources)
 	$(OBJCOPY) --only-keep-debug winestreamproxy.exe.so winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded winestreamproxy.exe.so
@@ -56,3 +56,5 @@ clean:
 	$(RM) winestreamproxy-debug.exe.so
 
 .PHONY: all release debug clean
+.ONESHELL:
+.POSIX:
