@@ -301,7 +301,7 @@ void enter_proxy_loop(proxy_data* proxy)
 
     if (InterlockedCompareExchange(aligned_running, TRUE, FALSE) != FALSE)
     {
-        LOG_ERROR(proxy->logger, (TEXT("Refusing to start proxy loop twice")));
+        LOG_CRITICAL(proxy->logger, (TEXT("Refusing to start proxy loop twice")));
         return;
     }
 

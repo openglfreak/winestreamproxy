@@ -32,7 +32,7 @@ extern void deallocate_path(TCHAR const* named_pipe_path);
 typedef struct proxy_data proxy_data;
 typedef void (*proxy_running_callback)(proxy_data* proxy);
 
-extern BOOL create_proxy(logger_instance* logger, connection_paths paths, HANDLE exit_event,
+extern BOOL create_proxy(logger_instance* logger, connection_paths paths, HANDLE exit_event /* Must be manual-reset. */,
                          proxy_running_callback running_callback, proxy_data** out_proxy);
 extern void enter_proxy_loop(proxy_data* proxy);
 extern void destroy_proxy(proxy_data* proxy);
