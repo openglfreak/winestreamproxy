@@ -197,15 +197,24 @@ BOOL thread_stop(logger_instance* const logger, thread_description* const desc, 
 
 extern BOOL thread_wait(logger_instance* const logger, thread_description* const desc, thread_data* const data)
 {
+    HANDLE thread_handle;
     DWORD wait_result;
 
     (void)desc;
 
     LOG_TRACE(logger, (_T("Waiting for thread to exit")));
 
+    if (!DuplicateHandle(GetCurrentProcess(), data->handle, GetCurrentProcess(), &thread_handle, SYNCHRONIZE, FALSE, 0))
+    {
+        LOG_ERROR(logger, (_T("Could not duplicate thread handle: Error %d"), GetLastError()));
+        return FALSE;
+    }
+
     do {
-        wait_result = WaitForSingleObject(data->handle, INFINITE);
+        wait_result = WaitForSingleObject(thread_handle, INFINITE);
     } while (wait_result == WAIT_TIMEOUT);
+
+    CloseHandle(thread_handle);
 
     switch (wait_result)
     {
