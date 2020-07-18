@@ -17,9 +17,9 @@ STRIP ?= x86_64-w64-mingw32-strip
 CFLAGS := -g3 -gdwarf-4 -fPIC -pie -Iinclude -DWIN32_LEAN_AND_MEAN=1 -Wall -Wextra -pedantic -pipe $(CFLAGS)
 RELEASE_CFLAGS := -O2 -fomit-frame-pointer -fno-stack-protector -fuse-linker-plugin -fuse-ld=gold -fgraphite-identity \
                   -floop-nest-optimize -fipa-pta -fno-semantic-interposition -fno-common -fdevirtualize-at-ltrans \
-                  -fno-plt -fgcse-after-reload -fipa-cp-clone -D_FORTIFY_SOURCE=0 -ffile-prefix-map="$${PWD:-$$(pwd)}"=. \
-                  $(CFLAGS) $(RELEASE_CFLAGS) -DNDEBUG=1
-DEBUG_CFLAGS := -Og -std=gnu89 -Werror -D_FORTIFY_SOURCE=2 $(CFLAGS) $(DEBUG_CFLAGS) -UNDEBUG
+                  -fno-plt -fgcse-after-reload -fipa-cp-clone -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
+                  -ffile-prefix-map="$${PWD:-$$(pwd)}"=. $(CFLAGS) $(RELEASE_CFLAGS) -DNDEBUG=1
+DEBUG_CFLAGS := -Og -std=gnu89 -Werror -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(CFLAGS) $(DEBUG_CFLAGS) -UNDEBUG
 
 LDFLAGS := -mconsole $(LDFLAGS)
 RELEASE_LDFLAGS := $(LDFLAGS) $(RELEASE_LDFLAGS)
