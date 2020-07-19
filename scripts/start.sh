@@ -52,6 +52,9 @@ if ! [ x"${base_dir+set}"x = x'set'x ]; then
     elif [ -e "${script_dir}/../${exe_name}" ]; then
         # https://stackoverflow.com/a/29835459
         base_dir="$(CDPATH='' cd -- "${script_dir}/.." && pwd -P)"
+    elif [ -e "${script_dir}/../out/${exe_name}" ]; then
+        # https://stackoverflow.com/a/29835459
+        base_dir="$(CDPATH='' cd -- "${script_dir}/../out" && pwd -P)"
     else
         printf 'error: %s not found\n' "${exe_name}" >&2
         exit 1

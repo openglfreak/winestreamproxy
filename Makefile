@@ -9,10 +9,16 @@
 #   E-Mail address: openglfreak@googlemail.com
 #   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D
 
+OUT ?= out
+
+MKDIR ?= mkdir -p --
 WINEGCC ?= winegcc
-RM ?= rm -f
 OBJCOPY ?= x86_64-w64-mingw32-objcopy
 STRIP ?= x86_64-w64-mingw32-strip
+CP ?= cp -LRpf --
+TOUCH ?= touch --
+RM ?= rm -f --
+RMDIR ?= rmdir --
 
 CFLAGS := -g3 -gdwarf-4 -fPIC -pie -Iinclude -DWIN32_LEAN_AND_MEAN=1 -Wall -Wextra -pedantic -pipe $(CFLAGS)
 RELEASE_CFLAGS := -O2 -fomit-frame-pointer -fno-stack-protector -fuse-linker-plugin -fuse-ld=gold -fgraphite-identity \
@@ -36,24 +42,43 @@ headers := include/winestreamproxy/logger.h include/winestreamproxy/winestreampr
            src/proxy/pipe.h src/proxy/proxy.h src/proxy/socket.h src/proxy/wait_thread.h
 
 all: release
+release: $(OUT)/winestreamproxy.exe.so $(OUT)/start.sh $(OUT)/wrapper.sh
+debug: $(OUT)/winestreamproxy-debug.exe.so $(OUT)/start-debug.sh $(OUT)/wrapper-debug.sh
 
-release: winestreamproxy.exe.so
+$(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o: $(sources) $(headers) Makefile
+	[ -e $(OUT) ] || $(MKDIR) $(OUT)
+	$(WINEGCC) $(RELEASE_CFLAGS) $(RELEASE_LDFLAGS) -o $(OUT)/winestreamproxy.exe.so $(sources)
+	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o
+	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe.so
+	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy.exe.dbg.o $(OUT)/winestreamproxy.exe.so
 
-debug: winestreamproxy-debug.exe.so
+$(OUT)/winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
+	[ -e $(OUT) ] || $(MKDIR) $(OUT)
+	$(WINEGCC) $(DEBUG_CFLAGS) $(DEBUG_LDFLAGS) -o $(OUT)/winestreamproxy-debug.exe.so $(sources)
 
-winestreamproxy.exe.so winestreamproxy.exe.dbg.o: $(sources) $(headers) Makefile
-	$(WINEGCC) $(RELEASE_CFLAGS) $(RELEASE_LDFLAGS) -o winestreamproxy.exe.so $(sources)
-	$(OBJCOPY) --only-keep-debug winestreamproxy.exe.so winestreamproxy.exe.dbg.o
-	$(STRIP) --strip-debug --strip-unneeded winestreamproxy.exe.so
-	$(OBJCOPY) --add-gnu-debuglink="$${PWD:-$$(pwd)}/winestreamproxy.exe.dbg.o" winestreamproxy.exe.so
-
-winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
-	$(WINEGCC) $(DEBUG_CFLAGS) $(DEBUG_LDFLAGS) -o winestreamproxy-debug.exe.so $(sources)
+$(OUT)/settings.conf: scripts/settings.conf
+	$(CP) scripts/settings.conf $(OUT)/settings.conf
+	$(TOUCH) $(OUT)/settings.conf
+$(OUT)/start.sh $(OUT)/start-debug.sh: scripts/start.sh $(OUT)/settings.conf
+	$(CP) scripts/start.sh $@
+	$(TOUCH) $@
+$(OUT)/wrapper.sh: scripts/wrapper.sh $(OUT)/start.sh
+	$(CP) scripts/wrapper.sh $(OUT)/wrapper.sh
+	$(TOUCH) $(OUT)/wrapper.sh
+$(OUT)/wrapper-debug.sh: scripts/wrapper.sh $(OUT)/start-debug.sh
+	$(CP) scripts/wrapper.sh $(OUT)/wrapper-debug.sh
+	$(TOUCH) $(OUT)/wrapper-debug.sh
 
 clean:
-	$(RM) winestreamproxy.exe.so
-	$(RM) winestreamproxy.exe.dbg.o
-	$(RM) winestreamproxy-debug.exe.so
+	$(RM) $(OUT)/winestreamproxy.exe.so
+	$(RM) $(OUT)/winestreamproxy.exe.dbg.o
+	$(RM) $(OUT)/settings.conf
+	$(RM) $(OUT)/start.sh
+	$(RM) $(OUT)/wrapper.sh
+	$(RM) $(OUT)/winestreamproxy-debug.exe.so
+	$(RM) $(OUT)/start-debug.sh
+	$(RM) $(OUT)/wrapper-debug.sh
+	$(RMDIR) $(OUT) 2>/dev/null || :
 
 .PHONY: all release debug clean
 .ONESHELL:

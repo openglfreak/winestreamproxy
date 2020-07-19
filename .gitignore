@@ -8,6 +8,11 @@
 #   E-Mail address: openglfreak@googlemail.com
 #   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D
 
-/winestreamproxy.exe.so
-/winestreamproxy.exe.dbg.o
-/winestreamproxy-debug.exe.so
+/out/winestreamproxy.exe.so
+/out/winestreamproxy.exe.dbg.o
+/out/winestreamproxy-debug.exe.so
+/out/settings.conf
+/out/start.sh
+/out/wrapper.sh
+/out/start-debug.sh
+/out/wrapper-debug.sh
