@@ -37,12 +37,15 @@ if ! [ -e "${socket_path}" ]; then
 fi
 
 # Switch to debug exe if the script name is start-debug.
-case "${0##*/}" in
-    start-debug|start-debug.sh)
-        exe_name=winestreamproxy-debug.exe.so;;
-    *)
-        exe_name=winestreamproxy.exe.so;;
-esac
+# shellcheck disable=SC1011,SC2026
+if ! [ x"${exe_name+set}"x = x'set'x ]; then
+    case "${0##*/}" in
+        start-debug|start-debug.sh)
+            exe_name=winestreamproxy-debug.exe.so;;
+        *)
+            exe_name=winestreamproxy.exe.so;;
+    esac
+fi
 
 # Find base directory.
 # shellcheck disable=SC1011,SC2026
@@ -66,9 +69,10 @@ fi
 is_in_path() {
     # POSIX.
     command -v "$1" >/dev/null 2>&1 && return || :
-    type -p "$1" >/dev/null 2>&1 && return || :
     hash "$1" >/dev/null 2>&1 && return || :
     # Non-POSIX.
+    # shellcheck disable=SC2039
+    type -p "$1" >/dev/null 2>&1 && return || :
     # shellcheck disable=SC2230
     which "$1" >/dev/null 2>&1 && return || :
     # Not found.
@@ -76,7 +80,7 @@ is_in_path() {
 }
 
 # Find wine executable path.
-# shellcheck disable=SC1011,SC2026
+# shellcheck disable=SC1011,SC2026,SC2153
 if [ x"${WINE+set}"x = x'set'x ]; then
     wine="${WINE}"
 else
