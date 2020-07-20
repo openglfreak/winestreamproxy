@@ -64,6 +64,19 @@ if ! [ x"${base_dir+set}"x = x'set'x ]; then
     fi
 fi
 
+# Function that can be used to check if a Wine prefix is a 64-bit prefix.
+is_prefix_win64() {
+    [ -e "$1/system.reg" ] && grep -q '^#arch=win64$' "$1/system.reg" && \
+    return || return 1
+}
+
+# Function that can be used to check if a file is in 64-bit ELF format.
+is_elf64() {
+    od -N 5 -t x1 -- "$1" | \
+    grep -q -m 1 '^[^[:space:]][^[:space:]]*[[:space:]][[:space:]]*7f[[:space:]][[:space:]]*45[[:space:]][[:space:]]*4c[[:space:]][[:space:]]*46[[:space:]][[:space:]]*02$' && \
+    return || return 1
+}
+
 # Function that can be used to check if a program is in the PATH.
 # shellcheck disable=SC2015
 is_in_path() {
@@ -84,7 +97,11 @@ is_in_path() {
 if [ x"${WINE+set}"x = x'set'x ]; then
     wine="${WINE}"
 else
-    if [ x"$WINEARCH"x = x'win64'x ] && \
+    if ! [ x"${WINEARCH+set}"x = x'set'x ] && \
+       is_prefix_win64 "${WINEPREFIX:-$HOME/.wine}"; then
+        WINEARCH=win64
+    fi
+    if [ x"${WINEARCH}"x = x'win64'x ] && is_elf64 "${base_dir}/${exe_name}" && \
        { is_in_path wine64 || wine64 --version > /dev/null 2>&1; }; then
         wine=wine64
     elif is_in_path wine || wine --version > /dev/null 2>&1; then
