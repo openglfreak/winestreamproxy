@@ -117,4 +117,9 @@ fi
 
 # Start winestreamproxy in the background and wait until the pipe server loop is running.
 setsid setsid "${wine}" "${base_dir}/${exe_name}" "${pipe_name}" "${socket_path}" | \
-LC_ALL=C grep -q -m 1 -F 'Started pipe server loop'
+while IFS='' read -r line; do
+    case "${line}" in
+        *'Started pipe server loop')
+            break
+    esac
+done
