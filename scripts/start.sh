@@ -126,10 +126,13 @@ fi
 : "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
 
 # Start winestreamproxy in the background and wait until the pipe server loop is running.
-eval "setsid setsid -- ${wine} \"\${base_dir}/\${exe_name}\" \"\${pipe_name}\" \"\${socket_path}\"" | \
+{
+cmd="${wine} \"\${base_dir}/\${exe_name}\" \"\${pipe_name}\" \"\${socket_path}\""
+eval "setsid setsid -- sh -c '\"\$@\" | tee -a /proc/self/fd/3 &' sh $cmd" | \
 while IFS='' read -r line; do
     case "${line}" in
         *'Started pipe server loop')
             break
     esac
 done
+} 3>&1
