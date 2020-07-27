@@ -81,13 +81,13 @@ is_elf64() {
 # shellcheck disable=SC2015
 is_in_path() {
     # POSIX.
-    command -v "$1" >/dev/null 2>&1 && return || :
-    hash "$1" >/dev/null 2>&1 && return || :
+    command -v -- "$1" >/dev/null 2>&1 && return || :
+    hash -- "$1" >/dev/null 2>&1 && return || :
     # Non-POSIX.
     # shellcheck disable=SC2039
-    type -p "$1" >/dev/null 2>&1 && return || :
+    type -p -- "$1" >/dev/null 2>&1 && return || :
     # shellcheck disable=SC2230
-    which "$1" >/dev/null 2>&1 && return || :
+    which -- "$1" >/dev/null 2>&1 && return || :
     # Not found.
     return 1
 }
@@ -115,8 +115,18 @@ else
     printf 'warning: $WINE not set, using "%s"\n' "${WINE}" >&2
 fi
 
+if [ x"${wine#*/}"x != x"${wine}"x ] && [ -x "${wine}" ] || \
+   is_in_path "${wine}"; then
+    # shellcheck disable=SC2034
+    _wine="${wine}"
+    # shellcheck disable=SC2016
+    wine='${_wine}'
+fi
+
+: "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
+
 # Start winestreamproxy in the background and wait until the pipe server loop is running.
-setsid setsid "${wine}" "${base_dir}/${exe_name}" "${pipe_name}" "${socket_path}" | \
+eval "setsid setsid -- ${wine} \"\${base_dir}/\${exe_name}\" \"\${pipe_name}\" \"\${socket_path}\"" | \
 while IFS='' read -r line; do
     case "${line}" in
         *'Started pipe server loop')
