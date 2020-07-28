@@ -47,14 +47,14 @@ release: $(OUT)/winestreamproxy.exe.so $(OUT)/start.sh $(OUT)/wrapper.sh
 debug: $(OUT)/winestreamproxy-debug.exe.so $(OUT)/start-debug.sh $(OUT)/wrapper-debug.sh
 
 $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o: $(sources) $(headers) Makefile
-	[ -e $(OUT) ] || $(MKDIR) $(OUT)
+	$(MKDIR) $(OUT)
 	$(WINEGCC) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -o $(OUT)/winestreamproxy.exe.so $(sources)
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe.so
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy.exe.dbg.o $(OUT)/winestreamproxy.exe.so
 
 $(OUT)/winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
-	[ -e $(OUT) ] || $(MKDIR) $(OUT)
+	$(MKDIR) $(OUT)
 	$(WINEGCC) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -o $(OUT)/winestreamproxy-debug.exe.so $(sources)
 
 $(OUT)/settings.conf: scripts/settings.conf
