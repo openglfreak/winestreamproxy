@@ -28,13 +28,13 @@ extern BOOL pipe_create_server(logger_instance* logger, pipe_data* pipe, TCHAR c
 extern BOOL pipe_server_start_accept(logger_instance* logger, pipe_data* pipe, BOOL* out_is_async,
                                      OVERLAPPED* inout_accept_overlapped);
 extern BOOL pipe_prepare(logger_instance* logger, pipe_data* pipe_data);
-extern BOOL pipe_discard_prepared(logger_instance* logger, pipe_data* pipe_data);
 extern BOOL pipe_server_wait_accept(logger_instance* logger, pipe_data* pipe, HANDLE exit_event,
                                     OVERLAPPED* inout_accept_overlapped);
 extern BOOL pipe_close_server(logger_instance* logger, pipe_data* pipe);
+extern void pipe_cleanup(logger_instance* logger, connection_data* conn);
 
-extern BOOL pipe_stop_thread(logger_instance* logger, pipe_data* pipe); /* Only called if status is 1 or 2. */
-extern BOOL pipe_handler(connection_data* conn);
+extern BOOL pipe_stop_thread(logger_instance* logger, pipe_data* pipe); /* Only called if thread is running. */
+extern BOOL pipe_handler(logger_instance* logger, connection_data* conn);
 
 extern BOOL pipe_send_message(logger_instance* logger, pipe_data* pipe, unsigned char const* message,
                               size_t message_length);

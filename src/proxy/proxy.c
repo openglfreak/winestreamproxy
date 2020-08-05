@@ -118,7 +118,8 @@ void proxy_enter_loop(proxy_data* const proxy)
             stop = TRUE;
         }
 
-        connection_initialize(proxy, conn);
+        if (!stop)
+            connection_initialize(proxy, conn);
 
         if (!stop && !pipe_create_server(proxy->logger, &conn->pipe, proxy->parameters.paths.named_pipe_path))
         {
@@ -135,8 +136,6 @@ void proxy_enter_loop(proxy_data* const proxy)
 
         if (prev_conn)
         {
-            if (stop)
-                socket_discard_prepared(proxy->logger, &prev_conn->socket);
             if (stop || !handle_new_connection(proxy->logger, prev_conn))
             {
                 connection_close(prev_conn);
@@ -157,7 +156,6 @@ void proxy_enter_loop(proxy_data* const proxy)
 
         if (!socket_prepare(proxy->logger, proxy->parameters.paths.unix_socket_path, &conn->socket))
         {
-            pipe_discard_prepared(proxy->logger, &conn->pipe);
             if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
             pipe_close_server(proxy->logger, &conn->pipe);
             connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
@@ -166,8 +164,7 @@ void proxy_enter_loop(proxy_data* const proxy)
 
         if (!connection_prepare_threads(conn))
         {
-            socket_discard_prepared(proxy->logger, &conn->socket);
-            pipe_discard_prepared(proxy->logger, &conn->pipe);
+            socket_disconnect(proxy->logger, &conn->socket);
             if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
             pipe_close_server(proxy->logger, &conn->pipe);
             connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);

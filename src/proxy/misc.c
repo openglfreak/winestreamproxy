@@ -18,37 +18,6 @@
 #include <winbase.h>
 #include <winnt.h>
 
-BOOL wait_for_thread(logger_instance* const logger, TCHAR const* const name, HANDLE const thread)
-{
-    DWORD wait_result;
-
-    LOG_TRACE(logger, (_T("Waiting for %s thread to exit"), name));
-
-    do {
-        wait_result = WaitForSingleObject(thread, INFINITE);
-    } while (wait_result == WAIT_TIMEOUT);
-
-    switch (wait_result)
-    {
-        case WAIT_OBJECT_0:
-            break;
-        case WAIT_FAILED:
-            LOG_ERROR(logger, (_T("Waiting for %s thread exit failed: Error %d"), name, GetLastError()));
-            return FALSE;
-        default:
-            LOG_ERROR(logger, (
-                _T("Unexpected return value from WaitForSingleObject: Ret %d Error %d"),
-                wait_result,
-                GetLastError()
-            ));
-            return FALSE;
-    }
-
-    LOG_TRACE(logger, (_T("Waiting for %s thread exit finished"), name));
-
-    return TRUE;
-}
-
 static void make_hex_string(unsigned char const* bytes, size_t count, TCHAR* out_hex_str)
 {
     for (; count-- > 0; ++bytes)

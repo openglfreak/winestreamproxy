@@ -25,10 +25,10 @@ extern "C" {
 extern BOOL socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
 extern BOOL socket_connect(logger_instance* logger, socket_data* socket);
 extern BOOL socket_disconnect(logger_instance* logger, socket_data* socket);
-extern BOOL socket_discard_prepared(logger_instance* logger, socket_data* socket);
+extern void socket_cleanup(logger_instance* logger, connection_data* conn);
 
-extern BOOL socket_stop_thread(logger_instance* logger, socket_data* socket); /* Only called if status is 1 or 2. */
-extern BOOL socket_handler(connection_data* conn);
+extern BOOL socket_stop_thread(logger_instance* logger, socket_data* socket); /* Only called if thread is running. */
+extern BOOL socket_handler(logger_instance* logger, connection_data* conn);
 
 extern BOOL socket_send_message(logger_instance* logger, socket_data* socket, unsigned char const* message,
                                 size_t message_length);
