@@ -79,7 +79,7 @@ clean:
 	$(RM) $(OUT)/winestreamproxy-debug.exe.so
 	$(RM) $(OUT)/start-debug.sh
 	$(RM) $(OUT)/wrapper-debug.sh
-	$(RMDIR) $(OUT) 2>/dev/null || :
+	-$(RMDIR) $(OUT) 2>/dev/null || :
 
 .PHONY: all release debug clean
 .ONESHELL:
