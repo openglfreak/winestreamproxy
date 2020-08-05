@@ -55,13 +55,29 @@ void running_callback(logger_instance* const logger, proxy_data* const proxy)
     double_spawn_finish(logger, &double_spawn);
 }
 
+static HANDLE exit_event;
+
+WINAPI BOOL console_ctrl_handler(DWORD const ctrl_type)
+{
+    switch (ctrl_type)
+    {
+        case CTRL_C_EVENT:
+        case CTRL_BREAK_EVENT:
+        case CTRL_CLOSE_EVENT:
+        case CTRL_LOGOFF_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
+            SetEvent(exit_event);
+            return TRUE;
+    }
+    return FALSE;
+}
+
 int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 {
     logger_instance* logger;
     DOUBLE_SPAWN_RETURN dsret;
     BOOL deallocate_pipe_path;
     connection_paths paths;
-    HANDLE exit_event;
     proxy_data* proxy;
 
     if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
@@ -109,6 +125,9 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 
     if (!create_proxy(logger, paths, exit_event, running_callback, &proxy))
         return 1;
+
+    if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
+        LOG_ERROR(logger, (_T("Could not set console ctrl handler: Error %d"), GetLastError()));
 
     enter_proxy_loop(proxy);
 
