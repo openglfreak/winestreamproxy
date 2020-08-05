@@ -50,6 +50,12 @@ BOOL socket_discard_prepared(logger_instance* const logger, socket_data* const s
     return TRUE;
 }
 
+void socket_cleanup(logger_instance* const logger, connection_data* const conn)
+{
+    (void)logger;
+    (void)conn;
+}
+
 BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket)
 {
     (void)logger;
@@ -58,8 +64,9 @@ BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket
     return TRUE;
 }
 
-BOOL socket_handler(connection_data* const conn)
+BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
 {
+    (void)logger;
     (void)conn;
 
     return TRUE;

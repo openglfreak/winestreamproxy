@@ -12,6 +12,8 @@
 #ifndef __WINESTREAMPROXY_PROXY_DATA_SOCKET_DATA_H__
 #define __WINESTREAMPROXY_PROXY_DATA_SOCKET_DATA_H__
 
+#include "thread_data.h"
+
 #include <windef.h>
 #include <winbase.h>
 #include <sys/un.h>
@@ -20,11 +22,7 @@ typedef struct socket_data {
     struct sockaddr_un  addr;
     int                 fd;
     int                 thread_exit_eventfd;
-
-    HANDLE          thread;
-    HANDLE          trigger_event;
-    LONG volatile   action; /* 0 = exit, 1 = start */
-    LONG volatile   status; /* 0 = not started, 1 = waiting for start, 2 = running, 3 = stopping, 4 = stopped */
+    thread_data         thread;
 } socket_data;
 
 #endif /* !defined(__WINESTREAMPROXY_PROXY_DATA_SOCKET_DATA_H__) */

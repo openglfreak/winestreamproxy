@@ -73,6 +73,12 @@ BOOL pipe_close_server(logger_instance* const logger, pipe_data* const pipe)
     return TRUE;
 }
 
+void pipe_cleanup(logger_instance* const logger, connection_data* const conn)
+{
+    (void)logger;
+    (void)conn;
+}
+
 BOOL pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
 {
     (void)logger;
@@ -81,8 +87,9 @@ BOOL pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
     return TRUE;
 }
 
-BOOL pipe_handler(connection_data* const conn)
+BOOL pipe_handler(logger_instance* const logger, connection_data* const conn)
 {
+    (void)logger;
     (void)conn;
 
     return TRUE;

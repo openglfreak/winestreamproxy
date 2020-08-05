@@ -12,6 +12,8 @@
 #ifndef __WINESTREAMPROXY_PROXY_DATA_PIPE_DATA_H__
 #define __WINESTREAMPROXY_PROXY_DATA_PIPE_DATA_H__
 
+#include "thread_data.h"
+
 #include <windef.h>
 #include <winbase.h>
 
@@ -21,11 +23,7 @@ typedef struct pipe_data {
     BOOL        read_is_overlapped;
     OVERLAPPED  write_overlapped;
     BOOL        write_is_overlapped;
-
-    HANDLE          thread;
-    HANDLE          trigger_event;
-    LONG volatile   action; /* 0 = exit, 1 = start */
-    LONG volatile   status; /* 0 = not started, 1 = waiting for start, 2 = running, 3 = stopping, 4 = stopped */
+    thread_data thread;
 } pipe_data;
 
 #endif /* !defined(__WINESTREAMPROXY_PROXY_DATA_PIPE_DATA_H__) */

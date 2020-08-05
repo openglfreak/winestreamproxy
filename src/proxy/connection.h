@@ -20,6 +20,9 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
+extern thread_description pipe_thread_description;
+extern thread_description socket_thread_description;
+
 extern void connection_initialize(proxy_data* proxy, connection_data* conn);
 extern BOOL connection_prepare_threads(connection_data* conn);
 extern BOOL connection_launch_threads(connection_data* conn);

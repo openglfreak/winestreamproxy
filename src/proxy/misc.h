@@ -30,7 +30,6 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern BOOL wait_for_thread(logger_instance* logger, TCHAR const* name, HANDLE thread);
 extern void dbg_output_bytes(logger_instance* logger, TCHAR const* prefix, unsigned char const* bytes, size_t count);
 
 #ifdef __cplusplus
