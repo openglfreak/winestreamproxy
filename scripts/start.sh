@@ -128,7 +128,7 @@ fi
 # Start winestreamproxy in the background and wait until the pipe server loop is running.
 {
 cmd="${wine} \"\${base_dir}/\${exe_name}\" \"\${pipe_name}\" \"\${socket_path}\""
-eval "setsid setsid -- sh -c '\"\$@\" | { tee -a /proc/self/fd/3 2>/dev/null || cat >>/proc/self/fd/3; } &' sh $cmd" | \
+eval "setsid setsid -- sh -c '\"\$@\" | { tee -a /proc/self/fd/3 2>/dev/null || exec cat >>/proc/self/fd/3; } &' sh $cmd" | \
 while IFS='' read -r line; do
     case "${line}" in
         *'Started pipe server loop')
