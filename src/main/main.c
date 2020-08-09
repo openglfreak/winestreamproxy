@@ -18,6 +18,12 @@
 #include <windef.h>
 #include <winnt.h>
 
+#define _STRINGIFY(x) _T(#x)
+#define STRINGIFY(x) _STRINGIFY(x)
+
+#define VERSION STRINGIFY(MAJOR_VERSION) _T(".") STRINGIFY(MINOR_VERSION) _T(".") STRINGIFY(PATCH_VERSION) \
+                STRINGIFY(EXTRA_VERSION)
+
 static void print_help(TCHAR const* const arg0)
 {
     TCHAR const* exe;
@@ -33,7 +39,7 @@ static void print_help(TCHAR const* const arg0)
     else
         exe = _T("winestreamproxy.exe.so");
 
-    _tprintf(_T("Usage: %s <pipe name> <socket name>\n"), exe);
+    _tprintf(_T("winestreamproxy version %s\n") _T("Usage: %s <pipe name> <socket name>\n"), VERSION, exe);
 }
 
 #ifdef __cplusplus

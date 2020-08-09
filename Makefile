@@ -11,8 +11,10 @@
 .POSIX:
 
 OUT = out
+OBJ = obj
 
 MKDIR = mkdir -p --
+WRC = wrc
 WINEGCC = winegcc
 OBJCOPY = objcopy
 STRIP = strip
@@ -23,8 +25,15 @@ RMDIR = rmdir --
 
 _include_stdarg = -include stdarg.h  # Work around Wine headers bug in 32-bit mode.
 
-_CFLAGS = -g3 -gdwarf-4 -fPIC -pie -Iinclude -DWIN32_LEAN_AND_MEAN=1 -Wall -Wextra -pedantic -pipe $(CFLAGS) \
-          $(_include_stdarg)
+_CPPFLAGS = -DWIN32_LEAN_AND_MEAN=1 $(CPPFLAGS)
+_RELEASE_CPPFLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 $(_CPPFLAGS) $(RELEASE_CPPFLAGS) -UNDEBUG -DNDEBUG=1
+_DEBUG_CPPFLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(_CPPFLAGS) $(DEBUG_CPPFLAGS) -UNDEBUG
+
+_WRCFLAGS = $(WRCFLAGS)
+_RELEASE_WRCFLAGS = $(RELEASE_WRCFLAGS)
+_DEBUG_WRCFLAGS = $(DEBUG_WRCFLAGS)
+
+_CFLAGS = -g3 -gdwarf-4 -fPIC -pie -Iinclude -Wall -Wextra -pedantic -pipe $(CFLAGS) $(_include_stdarg)
 _RELEASE_CFLAGS = -O2 -fomit-frame-pointer -fno-stack-protector -fuse-linker-plugin -fuse-ld=gold -fgraphite-identity \
                   -floop-nest-optimize -fipa-pta -fno-semantic-interposition -fno-common -fdevirtualize-at-ltrans \
                   -fno-plt -fgcse-after-reload -fipa-cp-clone -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
@@ -48,16 +57,38 @@ all: release
 release: $(OUT)/winestreamproxy.exe.so $(OUT)/start.sh $(OUT)/wrapper.sh
 debug: $(OUT)/winestreamproxy-debug.exe.so $(OUT)/start-debug.sh $(OUT)/wrapper-debug.sh
 
-$(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o: $(sources) $(headers) Makefile
+$(OBJ)/version.h $(OBJ)/.version: Makefile gen-version.sh
+	$(MKDIR) $(OBJ)
+	. ./gen-version.sh && get_version && \
+	output_version_defines >$(OBJ)/version.h && \
+	output_version_assignments >$(OBJ)/.version
+
+$(OBJ)/version.res: $(OBJ)/version.h src/version.rc
+	$(MKDIR) $(OBJ)
+	cat $(OBJ)/version.h src/version.rc | $(WRC) $(_RELEASE_CPPFLAGS) $(_RELEASE_WRCFLAGS) -o $(OBJ)/version.res
+
+$(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o $(OUT)/.version: $(OBJ)/version.h $(OBJ)/version.res \
+                              $(OBJ)/.version $(sources) $(headers) Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -o $(OUT)/winestreamproxy.exe.so $(sources)
+	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) \
+	           $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe.so $(sources)
+	$(CP) $(OBJ)/.version $(OUT)/.version
+	$(TOUCH) $(OUT)/.version
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe.so
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy.exe.dbg.o $(OUT)/winestreamproxy.exe.so
 
-$(OUT)/winestreamproxy-debug.exe.so: $(sources) $(headers) Makefile
+$(OBJ)/version-debug.res: $(OBJ)/version.h src/version.rc
+	$(MKDIR) $(OBJ)
+	cat $(OBJ)/version.h src/version.rc | $(WRC) $(_DEBUG_CPPFLAGS) $(_DEBUG_WRCFLAGS) -o $(OBJ)/version-debug.res
+
+$(OUT)/winestreamproxy-debug.exe.so $(OUT)/.version-debug: $(OBJ)/version.h $(OBJ)/version-debug.res $(OBJ)/.version \
+                                     $(sources) $(headers) Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -o $(OUT)/winestreamproxy-debug.exe.so $(sources)
+	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) \
+	           $(OBJ)/version-debug.res -o $(OUT)/winestreamproxy-debug.exe.so $(sources)
+	$(CP) $(OBJ)/.version $(OUT)/.version-debug
+	$(TOUCH) $(OUT)/.version-debug
 
 $(OUT)/settings.conf: scripts/settings.conf
 	$(CP) scripts/settings.conf $(OUT)/settings.conf
@@ -73,14 +104,21 @@ $(OUT)/wrapper-debug.sh: scripts/wrapper.sh $(OUT)/start-debug.sh
 	$(TOUCH) $(OUT)/wrapper-debug.sh
 
 clean:
+	$(RM) $(OBJ)/.version
+	$(RM) $(OBJ)/version.h
+	$(RM) $(OBJ)/version.res
+	$(RM) $(OBJ)/version-debug.res
+	$(RM) $(OUT)/.version
+	$(RM) $(OUT)/.version-debug
 	$(RM) $(OUT)/winestreamproxy.exe.so
 	$(RM) $(OUT)/winestreamproxy.exe.dbg.o
+	$(RM) $(OUT)/winestreamproxy-debug.exe.so
 	$(RM) $(OUT)/settings.conf
 	$(RM) $(OUT)/start.sh
 	$(RM) $(OUT)/wrapper.sh
-	$(RM) $(OUT)/winestreamproxy-debug.exe.so
 	$(RM) $(OUT)/start-debug.sh
 	$(RM) $(OUT)/wrapper-debug.sh
+	-$(RMDIR) $(OBJ) 2>/dev/null || :
 	-$(RMDIR) $(OUT) 2>/dev/null || :
 
 .PHONY: all release debug clean

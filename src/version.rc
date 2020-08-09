@@ -1,0 +1,88 @@
+/* Copyright (C) 2020 Torge Matthies
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * Author contact info:
+ *   E-Mail address: openglfreak@googlemail.com
+ *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
+
+#include <winver.h>
+
+#if !defined(MAJOR_VERSION) || !defined(MINOR_VERSION) || !defined(PATCH_VERSION)
+#error "MAJOR_VERSION, MINOR_VERSION and PATCH_VERSION must be defined"
+#endif
+
+#if defined(HAS_LOCAL_VERSION) && HAS_LOCAL_VERSION
+#define FVEXTRA1 2
+#else
+#define FVEXTRA1 0
+#endif
+#if defined(IS_DIRTY) && IS_DIRTY
+#define FVEXTRA2 4
+#else
+#define FVEXTRA2 0
+#endif
+#if defined(HAS_EXTRA_VERSION) && HAS_EXTRA_VERSION
+#define FVEXTRA3 8
+#else
+#define FVEXTRA3 0
+#endif
+#define FVEXTRA FVEXTRA1 | FVEXTRA2 | FVEXTRA3
+
+#if !defined(NDEBUG) || !NDEBUG
+#define FF1 VS_FF_DEBUG
+#else
+#define FF1 0
+#endif
+#if defined(HAS_LOCAL_VERSION) && HAS_LOCAL_VERSION
+#define FF2 VS_FF_PRIVATEBUILD
+#else
+#define FF2 0
+#endif
+#define FF FF1 | FF2
+
+#if defined(NDEBUG) && NDEBUG
+#define FNAME "winestreamproxy.exe.so"
+#else
+#define FNAME "winestreamproxy-debug.exe.so"
+#endif
+
+#define _STRINGIFY(x) #x
+#define STRINGIFY(x) _STRINGIFY(x)
+
+1 VERSIONINFO
+FILEVERSION     MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION, FVEXTRA
+PRODUCTVERSION  MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION, FVEXTRA
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       FF
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      ""
+            VALUE "FileDescription",  "Forwards messages between a named pipe client and a unix socket server."
+            VALUE "FileVersion",      STRINGIFY(MAJOR_VERSION) "." STRINGIFY(MINOR_VERSION) "." STRINGIFY(PATCH_VERSION) \
+                                      STRINGIFY(EXTRA_VERSION)
+            VALUE "InternalName",     "winestreamproxy"
+            VALUE "LegalCopyright",   "Copyright (C) 2020 Torge Matthies"
+            VALUE "OriginalFilename", FNAME
+#if defined(HAS_LOCAL_VERSION) && HAS_LOCAL_VERSION
+            VALUE "PrivateBuild",     STRINGIFY(LOCAL_VERSION)
+#endif
+            VALUE "ProductName",      "winestreamproxy"
+            VALUE "ProductVersion",   STRINGIFY(MAJOR_VERSION) "." STRINGIFY(MINOR_VERSION) "." STRINGIFY(PATCH_VERSION) \
+                                      STRINGIFY(EXTRA_VERSION)
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
