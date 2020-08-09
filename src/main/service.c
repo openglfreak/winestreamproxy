@@ -153,6 +153,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     if (service_status_handle == 0)
     {
         LOG_CRITICAL(logger, (_T("Failed to register service control handler: Error %d"), GetLastError()));
+        log_destroy_logger(logger);
         return;
     }
 
@@ -167,6 +168,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         if (!params.paths.named_pipe_path)
         {
             service_set_status_stopped(logger);
+            log_destroy_logger(logger);
             return;
         }
         deallocate_pipe_path = TRUE;
@@ -181,7 +183,10 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     params.paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
     if (!params.paths.unix_socket_path)
     {
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
         service_set_status_stopped(logger);
+        log_destroy_logger(logger);
         return;
     }
 #else
@@ -190,13 +195,29 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
 
     params.exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!params.exit_event)
+    {
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
+        service_set_status_stopped(logger);
+        log_destroy_logger(logger);
         return;
+    }
 
     params.state_change_callback = 0;
 
     if (!proxy_create(logger, params, &proxy))
     {
+        CloseHandle(params.exit_event);
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
         service_set_status_stopped(logger);
+        log_destroy_logger(logger);
         return;
     }
 
@@ -207,7 +228,14 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
     {
         LOG_CRITICAL(logger, (_T("Failed to set service status to running: Error %d"), GetLastError()));
+        CloseHandle(params.exit_event);
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
         service_set_status_stopped(logger);
+        log_destroy_logger(logger);
         return;
     }
 
