@@ -66,10 +66,10 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
         return 1;
     }
 
-#ifdef NDEBUG
-    log_set_min_level(logger, LOG_LEVEL_INFO);
-#elif defined(TRACE)
+#if defined(TRACE)
     log_set_min_level(logger, LOG_LEVEL_TRACE);
+#elif defined(NDEBUG)
+    log_set_min_level(logger, LOG_LEVEL_INFO);
 #else
     log_set_min_level(logger, LOG_LEVEL_DEBUG);
 #endif
