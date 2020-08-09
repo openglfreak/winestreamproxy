@@ -121,13 +121,19 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 
     dsret = double_spawn_execute(logger, &double_spawn);
     if (dsret != DOUBLE_SPAWN_RETURN_CONTINUE)
+    {
+        log_destroy_logger(logger);
         return dsret != DOUBLE_SPAWN_RETURN_EXIT ? 1 : 0;
+    }
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
         params.paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
         if (!params.paths.named_pipe_path)
+        {
+            log_destroy_logger(logger);
             return 1;
+        }
         deallocate_pipe_path = TRUE;
     }
     else
@@ -139,19 +145,41 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 #ifdef _UNICODE
     params.paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
     if (!params.paths.unix_socket_path)
+    {
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
+        log_destroy_logger(logger);
         return 1;
+    }
 #else
     params.paths.unix_socket_path = socket_arg;
 #endif
 
     params.exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!params.exit_event)
+    {
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
+        log_destroy_logger(logger);
         return 1;
+    }
 
     params.state_change_callback = state_change_callback;
 
     if (!proxy_create(logger, params, &proxy))
+    {
+        CloseHandle(params.exit_event);
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
+        log_destroy_logger(logger);
         return 1;
+    }
 
     exit_event = params.exit_event;
     if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
