@@ -15,6 +15,7 @@
 #include <winestreamproxy/logger.h>
 #include <winestreamproxy/winestreamproxy.h>
 
+#include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 #include <winnt.h>
@@ -26,7 +27,7 @@ static DWORD CALLBACK pipe_thread_proc(LPVOID const lpvoid_conn)
 
 #   define conn ((connection_data*)lpvoid_conn)
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Started prepared pipe thread")));
+    LOG_TRACE(conn->proxy->logger, (_T("Started prepared pipe thread")));
 
     wait_handles[0] = conn->start_events.pipe;
     wait_handles[1] = conn->proxy->exit_event;
@@ -42,23 +43,23 @@ static DWORD CALLBACK pipe_thread_proc(LPVOID const lpvoid_conn)
         case WAIT_OBJECT_0:
             if (!conn->start)
             {
-                LOG_TRACE(conn->proxy->logger, (TEXT("Stopping prepared pipe thread")));
+                LOG_TRACE(conn->proxy->logger, (_T("Stopping prepared pipe thread")));
                 return 0;
             }
-            LOG_TRACE(conn->proxy->logger, (TEXT("Starting pipe handling loop")));
+            LOG_TRACE(conn->proxy->logger, (_T("Starting pipe handling loop")));
             return !pipe_handler(conn);
         case WAIT_OBJECT_0 + 1:
-            LOG_TRACE(conn->proxy->logger, (TEXT("Stopping prepared pipe thread")));
+            LOG_TRACE(conn->proxy->logger, (_T("Stopping prepared pipe thread")));
             return 0;
         case WAIT_FAILED:
             LOG_ERROR(conn->proxy->logger, (
-                TEXT("Waiting for pipe thread start event failed: Error %d"),
+                _T("Waiting for pipe thread start event failed: Error %d"),
                 GetLastError()
             ));
             break;
         default:
             LOG_ERROR(conn->proxy->logger, (
-                TEXT("Unexpected return value from WaitForMultipleObjects: Ret %d Error %d"),
+                _T("Unexpected return value from WaitForMultipleObjects: Ret %d Error %d"),
                 wait_result,
                 GetLastError()
             ));
@@ -77,7 +78,7 @@ static DWORD CALLBACK socket_thread_proc(LPVOID const lpvoid_conn)
 
 #   define conn ((connection_data*)lpvoid_conn)
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Started prepared socket thread")));
+    LOG_TRACE(conn->proxy->logger, (_T("Started prepared socket thread")));
 
     wait_handles[0] = conn->start_events.socket;
     wait_handles[1] = conn->proxy->exit_event;
@@ -93,23 +94,23 @@ static DWORD CALLBACK socket_thread_proc(LPVOID const lpvoid_conn)
         case WAIT_OBJECT_0:
             if (!conn->start)
             {
-                LOG_TRACE(conn->proxy->logger, (TEXT("Stopping prepared socket thread")));
+                LOG_TRACE(conn->proxy->logger, (_T("Stopping prepared socket thread")));
                 return 0;
             }
-            LOG_TRACE(conn->proxy->logger, (TEXT("Starting socket handling loop")));
+            LOG_TRACE(conn->proxy->logger, (_T("Starting socket handling loop")));
             return !socket_handler(conn);
         case WAIT_OBJECT_0 + 1:
-            LOG_TRACE(conn->proxy->logger, (TEXT("Stopping prepared socket thread")));
+            LOG_TRACE(conn->proxy->logger, (_T("Stopping prepared socket thread")));
             return 0;
         case WAIT_FAILED:
             LOG_ERROR(conn->proxy->logger, (
-                TEXT("Waiting for socket thread start event failed: Error %d"),
+                _T("Waiting for socket thread start event failed: Error %d"),
                 GetLastError()
             ));
             break;
         default:
             LOG_ERROR(conn->proxy->logger, (
-                TEXT("Unexpected return value from WaitForMultipleObjects: Ret %d Error %d"),
+                _T("Unexpected return value from WaitForMultipleObjects: Ret %d Error %d"),
                 wait_result,
                 GetLastError()
             ));
@@ -124,7 +125,7 @@ static DWORD CALLBACK socket_thread_proc(LPVOID const lpvoid_conn)
 static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
                                HANDLE const pipe, connection_data* const conn)
 {
-    LOG_TRACE(proxy->logger, (TEXT("Preparing connection data")));
+    LOG_TRACE(proxy->logger, (_T("Preparing connection data")));
 
     conn->proxy = proxy;
     conn->start = FALSE;
@@ -136,7 +137,7 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
     if (!conn->start_events.pipe)
     {
         LOG_CRITICAL(proxy->logger, (
-            TEXT("Could not create a thread start event: Error %d"),
+            _T("Could not create a thread start event: Error %d"),
             GetLastError()
         ));
         discard_prepared_pipe_data(proxy->logger, &conn->data.pipe);
@@ -149,7 +150,7 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
                          0, FALSE, DUPLICATE_SAME_ACCESS))
     {
         LOG_CRITICAL(proxy->logger, (
-            TEXT("Could not duplicate thread start event: Error %d"),
+            _T("Could not duplicate thread start event: Error %d"),
             GetLastError()
         ));
         CloseHandle(conn->start_events.pipe);
@@ -171,7 +172,7 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
     if (conn->threads.pipe == NULL)
     {
         LOG_CRITICAL(proxy->logger, (
-            TEXT("Could not create thread for named pipe: Error %d"),
+            _T("Could not create thread for named pipe: Error %d"),
             GetLastError()
         ));
         discard_prepared_socket(proxy->logger, &conn->data.socket);
@@ -186,7 +187,7 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
     if (conn->threads.socket == NULL)
     {
         LOG_CRITICAL(proxy->logger, (
-            TEXT("Could not create thread for socket: Error %d"),
+            _T("Could not create thread for socket: Error %d"),
             GetLastError()
         ));
         SetEvent(conn->start_events.pipe);
@@ -202,7 +203,7 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
 
     if (ResumeThread(conn->threads.pipe) == (DWORD)-1)
     {
-        LOG_CRITICAL(proxy->logger, (TEXT("Could not start thread for pipe: Error %d"), GetLastError()));
+        LOG_CRITICAL(proxy->logger, (_T("Could not start thread for pipe: Error %d"), GetLastError()));
         SetEvent(conn->start_events.pipe);
         CloseHandle(conn->threads.socket);
         CloseHandle(conn->threads.pipe);
@@ -214,14 +215,14 @@ static BOOL prepare_connection(proxy_data* proxy, char const* socket_path,
         return FALSE;
     }
 
-    LOG_TRACE(proxy->logger, (TEXT("Prepared connection data")));
+    LOG_TRACE(proxy->logger, (_T("Prepared connection data")));
 
     return TRUE;
 }
 
 static void discard_prepared_connection(logger_instance* const logger, connection_data* const conn)
 {
-    LOG_TRACE(logger, (TEXT("Discarding prepared connection object")));
+    LOG_TRACE(logger, (_T("Discarding prepared connection object")));
 
     SetEvent(conn->start_events.socket);
     SetEvent(conn->start_events.pipe);
@@ -230,35 +231,35 @@ static void discard_prepared_connection(logger_instance* const logger, connectio
     CloseHandle(conn->data.pipe.write_overlapped.hEvent);
     CloseHandle(conn->data.pipe.thread_exit_event);
 
-    LOG_TRACE(logger, (TEXT("Discarded prepared connection object")));
+    LOG_TRACE(logger, (_T("Discarded prepared connection object")));
 }
 
 static BOOL handle_new_connection(logger_instance* const logger, connection_data* const conn)
 {
-    LOG_TRACE(logger, (TEXT("Handling new client connection")));
+    LOG_TRACE(logger, (_T("Handling new client connection")));
 
     if (!connect_socket(logger, &conn->data.socket))
         return FALSE;
 
-    LOG_INFO(logger, (TEXT("Connected to server socket")));
+    LOG_INFO(logger, (_T("Connected to server socket")));
 
     conn->start = TRUE;
     if (!SetEvent(conn->start_events.pipe))
     {
-        LOG_ERROR(logger, (TEXT("Failed setting thread start event: Error %d"), GetLastError()));
+        LOG_ERROR(logger, (_T("Failed setting thread start event: Error %d"), GetLastError()));
         conn->start = FALSE;
         close_socket(conn, FALSE);
         return FALSE;
     }
 
-    LOG_TRACE(logger, (TEXT("Threads signaled to start")));
+    LOG_TRACE(logger, (_T("Threads signaled to start")));
 
     return TRUE;
 }
 
 static void close_connection(connection_data* conn)
 {
-    LOG_TRACE(conn->proxy->logger, (TEXT("Closing connection")));
+    LOG_TRACE(conn->proxy->logger, (_T("Closing connection")));
 
     conn->start = FALSE;
     SetEvent(conn->start_events.pipe);
@@ -267,14 +268,14 @@ static void close_connection(connection_data* conn)
     CloseHandle(conn->threads.pipe);
     CloseHandle(conn->threads.socket);
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Closed connection")));
+    LOG_TRACE(conn->proxy->logger, (_T("Closed connection")));
 }
 
 static void close_all_connections(proxy_data* proxy)
 {
     connection_list_entry* entry;
 
-    LOG_TRACE(proxy->logger, (TEXT("Closing all connections")));
+    LOG_TRACE(proxy->logger, (_T("Closing all connections")));
 
     entry = proxy->connections_start;
     while (entry)
@@ -287,7 +288,7 @@ static void close_all_connections(proxy_data* proxy)
         entry = next;
     }
 
-    LOG_TRACE(proxy->logger, (TEXT("Closed all connections")));
+    LOG_TRACE(proxy->logger, (_T("Closed all connections")));
 }
 
 void enter_proxy_loop(proxy_data* proxy)
@@ -301,11 +302,11 @@ void enter_proxy_loop(proxy_data* proxy)
 
     if (InterlockedCompareExchange(aligned_running, TRUE, FALSE) != FALSE)
     {
-        LOG_CRITICAL(proxy->logger, (TEXT("Refusing to start proxy loop twice")));
+        LOG_CRITICAL(proxy->logger, (_T("Refusing to start proxy loop twice")));
         return;
     }
 
-    LOG_TRACE(proxy->logger, (TEXT("Starting pipe server loop")));
+    LOG_TRACE(proxy->logger, (_T("Starting pipe server loop")));
 
     if (!create_pipe(proxy->logger, proxy->paths.named_pipe_path, &pipe))
     {
@@ -346,7 +347,7 @@ void enter_proxy_loop(proxy_data* proxy)
         {
             if (proxy->running_callback)
                 proxy->running_callback(proxy);
-            LOG_INFO(proxy->logger, (TEXT("Started pipe server loop")));
+            LOG_INFO(proxy->logger, (_T("Started pipe server loop")));
             first_loop = FALSE;
         }
 
@@ -387,7 +388,7 @@ void enter_proxy_loop(proxy_data* proxy)
 
     close_all_connections(proxy);
 
-    LOG_TRACE(proxy->logger, (TEXT("Stopped pipe server loop")));
+    LOG_TRACE(proxy->logger, (_T("Stopped pipe server loop")));
 
     *aligned_running = FALSE;
 

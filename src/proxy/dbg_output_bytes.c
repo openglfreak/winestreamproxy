@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 
+#include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 #include <winnt.h>
@@ -23,31 +24,31 @@ void dbg_output_bytes(logger_instance* const logger, TCHAR const* const prefix,
     TCHAR* hex_str;
     size_t i;
 
-    LOG_TRACE(logger, (TEXT("Outputting array as hex string")));
+    LOG_TRACE(logger, (_T("Outputting array as hex string")));
 
     hex_str = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, sizeof(TCHAR) * (2 * count + 1));
     if (!hex_str)
     {
-        LOG_DEBUG(logger, (TEXT("Could not allocate memory for hex string")));
+        LOG_DEBUG(logger, (_T("Could not allocate memory for hex string")));
         return;
     }
 
     for (i = 0; i < count; ++i)
     {
         if ((unsigned char)bytes[i] < 0xA0)
-            hex_str[i * 2] = (((unsigned char)bytes[i] >> 4) & 0x0F) + TEXT('0');
+            hex_str[i * 2] = (((unsigned char)bytes[i] >> 4) & 0x0F) + _T('0');
         else
-            hex_str[i * 2] = (((unsigned char)bytes[i] >> 4) & 0x0F) - 10 + TEXT('A');
+            hex_str[i * 2] = (((unsigned char)bytes[i] >> 4) & 0x0F) - 10 + _T('A');
         if ((bytes[i] & 0x0F) < 0x0A)
-            hex_str[i * 2 + 1] = (bytes[i] & 0x0F) + TEXT('0');
+            hex_str[i * 2 + 1] = (bytes[i] & 0x0F) + _T('0');
         else
-            hex_str[i * 2 + 1] = (bytes[i] & 0x0F) - 10 + TEXT('A');
+            hex_str[i * 2 + 1] = (bytes[i] & 0x0F) - 10 + _T('A');
     }
-    hex_str[count * 2] = TEXT('\0');
+    hex_str[count * 2] = _T('\0');
 
-    LOG_DEBUG(logger, (TEXT("%s%s"), prefix, hex_str));
+    LOG_DEBUG(logger, (_T("%s%s"), prefix, hex_str));
 
     HeapFree(GetProcessHeap(), 0, hex_str);
 
-    LOG_TRACE(logger, (TEXT("Output array as hex string")));
+    LOG_TRACE(logger, (_T("Output array as hex string")));
 }

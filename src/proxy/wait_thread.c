@@ -11,6 +11,7 @@
 #include <winestreamproxy/logger.h>
 #include "wait_thread.h"
 
+#include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 
@@ -18,7 +19,7 @@ BOOL wait_for_thread(logger_instance* const logger, TCHAR const* const name, HAN
 {
     DWORD wait_result;
 
-    LOG_TRACE(logger, (TEXT("Waiting for %s thread to exit"), name));
+    LOG_TRACE(logger, (_T("Waiting for %s thread to exit"), name));
 
     do {
         wait_result = WaitForSingleObject(thread, INFINITE);
@@ -29,18 +30,18 @@ BOOL wait_for_thread(logger_instance* const logger, TCHAR const* const name, HAN
         case WAIT_OBJECT_0:
             break;
         case WAIT_FAILED:
-            LOG_ERROR(logger, (TEXT("Waiting for %s thread exit failed: Error %d"), name, GetLastError()));
+            LOG_ERROR(logger, (_T("Waiting for %s thread exit failed: Error %d"), name, GetLastError()));
             return 0;
         default:
             LOG_ERROR(logger, (
-                TEXT("Unexpected return value from WaitForSingleObject: Ret %d Error %d"),
+                _T("Unexpected return value from WaitForSingleObject: Ret %d Error %d"),
                 wait_result,
                 GetLastError()
             ));
             return 0;
     }
 
-    LOG_TRACE(logger, (TEXT("Waiting for %s thread exit finished"), name));
+    LOG_TRACE(logger, (_T("Waiting for %s thread exit finished"), name));
 
     return 1;
 }

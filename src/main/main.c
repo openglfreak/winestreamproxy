@@ -24,16 +24,16 @@ static void print_help(TCHAR const* const arg0)
 
     if (arg0)
     {
-        exe = _tcsrchr(arg0, TEXT('\\'));
+        exe = _tcsrchr(arg0, _T('\\'));
         if (exe)
             ++exe;
         else
             exe = arg0;
     }
     else
-        exe = TEXT("winestreamproxy.exe.so");
+        exe = _T("winestreamproxy.exe.so");
 
-    _tprintf(TEXT("Usage: %s <pipe name> <socket name>\n"), exe);
+    _tprintf(_T("Usage: %s <pipe name> <socket name>\n"), exe);
 }
 
 #ifdef __cplusplus

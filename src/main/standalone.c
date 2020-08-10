@@ -24,12 +24,12 @@
 #include <winnt.h>
 
 static TCHAR const* const log_level_prefixes[] = {
-    TEXT("TRACE   "),
-    TEXT("DEBUG   "),
-    TEXT("INFO    "),
-    TEXT("WARNING "),
-    TEXT("ERROR   "),
-    TEXT("CRITICAL")
+    _T("TRACE   "),
+    _T("DEBUG   "),
+    _T("INFO    "),
+    _T("WARNING "),
+    _T("ERROR   "),
+    _T("CRITICAL")
 };
 
 static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
@@ -39,7 +39,7 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
 
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, TEXT("%s: %s\n"),
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s: %s\n"),
               log_level_prefixes[level], (TCHAR const*)message);
 
     return 1;
@@ -62,7 +62,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 
     if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
     {
-        log_message(0, LOG_LEVEL_CRITICAL, TEXT("Couldn't create logger"));
+        log_message(0, LOG_LEVEL_CRITICAL, _T("Couldn't create logger"));
         return 1;
     }
 
@@ -74,7 +74,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
     log_set_min_level(logger, LOG_LEVEL_DEBUG);
 #endif
 
-    if (pipe_arg[0] != TEXT('\\') || pipe_arg[1] != TEXT('\\'))
+    if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
         paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
         if (!paths.named_pipe_path)

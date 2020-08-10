@@ -28,7 +28,7 @@ TCHAR const* socket_arg;
 
 static logger_instance* logger;
 /*HANDLE service_event_source;*/
-TCHAR const service_name[] = TEXT("Named pipe to unix socket proxy");
+TCHAR const service_name[] = _T("Named pipe to unix socket proxy");
 void CALLBACK service_proc(DWORD argc, LPTSTR* argv);
 SERVICE_TABLE_ENTRY const service_table[] = { { (LPTSTR)service_name, service_proc }, { 0, 0 } };
 SERVICE_STATUS service_status;
@@ -36,12 +36,12 @@ SERVICE_STATUS_HANDLE service_status_handle;
 HANDLE service_exit_event;
 
 /*static TCHAR const* const log_level_prefixes[] = {
-    TEXT("TRACE"),
-    TEXT("DEBUG"),
-    TEXT("INFO"),
-    TEXT("WARNING"),
-    TEXT("ERROR"),
-    TEXT("CRITICAL")
+    _T("TRACE"),
+    _T("DEBUG"),
+    _T("INFO"),
+    _T("WARNING"),
+    _T("ERROR"),
+    _T("CRITICAL")
 };
 
 static WORD const log_level_types[] = {
@@ -54,12 +54,12 @@ static WORD const log_level_types[] = {
 };*/
 
 static TCHAR const* const log_level_prefixes[] = {
-    TEXT("TRACE   "),
-    TEXT("DEBUG   "),
-    TEXT("INFO    "),
-    TEXT("WARNING "),
-    TEXT("ERROR   "),
-    TEXT("CRITICAL")
+    _T("TRACE   "),
+    _T("DEBUG   "),
+    _T("INFO    "),
+    _T("WARNING "),
+    _T("ERROR   "),
+    _T("CRITICAL")
 };
 
 static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
@@ -72,7 +72,7 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
 
     /* I am not implementing this crap... */
     /*ReportEvent(service_event_source, log_level_types[level],*/
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, TEXT("%s: %s\n"),
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s: %s\n"),
               log_level_prefixes[level], (TCHAR const*)message);
 
     return 1;
@@ -85,7 +85,7 @@ static void service_set_status_stopped(logger_instance* const logger)
     service_status.dwWin32ExitCode = GetLastError();
     service_status.dwCheckPoint = 1;
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
-        LOG_ERROR(logger, (TEXT("Failed to set service status to stopped: Error %d"), GetLastError()));
+        LOG_ERROR(logger, (_T("Failed to set service status to stopped: Error %d"), GetLastError()));
 }
 
 void WINAPI service_ctrl_handler(DWORD control)
@@ -101,7 +101,7 @@ void WINAPI service_ctrl_handler(DWORD control)
             service_status.dwWin32ExitCode = 0;
             service_status.dwCheckPoint = 3;
             if (SetServiceStatus(service_status_handle , &service_status) == 0)
-                LOG_ERROR(logger, (TEXT("Failed to set service status to stopping: Error %d"), GetLastError()));
+                LOG_ERROR(logger, (_T("Failed to set service status to stopping: Error %d"), GetLastError()));
 
             SetEvent(service_exit_event);
             break;
@@ -123,7 +123,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
 
     if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
     {
-        log_message(0, LOG_LEVEL_CRITICAL, TEXT("Couldn't create logger"));
+        log_message(0, LOG_LEVEL_CRITICAL, _T("Couldn't create logger"));
         return;
     }
 
@@ -138,16 +138,16 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     service_status_handle = RegisterServiceCtrlHandler(service_name, service_ctrl_handler);
     if (service_status_handle == 0)
     {
-        LOG_CRITICAL(logger, (TEXT("Failed to register service control handler: Error %d"), GetLastError()));
+        LOG_CRITICAL(logger, (_T("Failed to register service control handler: Error %d"), GetLastError()));
         return;
     }
 
     service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
     service_status.dwCurrentState = SERVICE_START_PENDING;
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
-        LOG_ERROR(logger, (TEXT("Failed to set service status to starting: Error %d"), GetLastError()));
+        LOG_ERROR(logger, (_T("Failed to set service status to starting: Error %d"), GetLastError()));
 
-    if (pipe_arg[0] != TEXT('\\') || pipe_arg[1] != TEXT('\\'))
+    if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
         paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
         if (!paths.named_pipe_path)
@@ -190,7 +190,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     service_status.dwCheckPoint = 0;
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
     {
-        LOG_CRITICAL(logger, (TEXT("Failed to set service status to running: Error %d"), GetLastError()));
+        LOG_CRITICAL(logger, (_T("Failed to set service status to running: Error %d"), GetLastError()));
         service_set_status_stopped(logger);
         return;
     }
@@ -210,7 +210,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     service_status.dwWin32ExitCode = 0;
     service_status.dwCheckPoint = 4;
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
-        LOG_ERROR(logger, (TEXT("Failed to set service status to stopped: Error %d"), GetLastError()));
+        LOG_ERROR(logger, (_T("Failed to set service status to stopped: Error %d"), GetLastError()));
 
     log_destroy_logger(logger);
 }

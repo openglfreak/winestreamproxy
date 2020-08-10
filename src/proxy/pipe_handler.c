@@ -20,6 +20,7 @@
 
 #include <sys/io.h>
 #include <sys/types.h>
+#include <tchar.h>
 #include <unistd.h>
 #include <windef.h>
 #include <winbase.h>
@@ -36,7 +37,7 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
     DWORD bytes_read;
     BOOL is_async;
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Reading message from pipe")));
+    LOG_TRACE(conn->proxy->logger, (_T("Reading message from pipe")));
 
     if (!*buffer)
     {
@@ -46,7 +47,7 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
         if (!*buffer)
         {
             LOG_ERROR(conn->proxy->logger, (
-                TEXT("Could not allocate %lu bytes"),
+                _T("Could not allocate %lu bytes"),
                 (unsigned long)(BUFSIZE * sizeof(char))
             ));
             return FALSE;
@@ -81,7 +82,7 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
 
         if (last_error == ERROR_BROKEN_PIPE)
         {
-            LOG_INFO(conn->proxy->logger, (TEXT("Client disconnected")));
+            LOG_INFO(conn->proxy->logger, (_T("Client disconnected")));
             *out_exit = TRUE;
             return TRUE;
         }
@@ -101,15 +102,15 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
                 case WAIT_OBJECT_0:
                     break;
                 case WAIT_OBJECT_0 + 1:
-                    LOG_DEBUG(conn->proxy->logger, (TEXT("Pipe thread: Received exit event")));
+                    LOG_DEBUG(conn->proxy->logger, (_T("Pipe thread: Received exit event")));
                     CancelIoEx(conn->data.pipe.handle, &conn->data.pipe.read_overlapped);
                     *out_exit = TRUE;
                     return TRUE;
                 case WAIT_FAILED:
-                    LOG_ERROR(conn->proxy->logger, (TEXT("Error %d while waiting for pipe handles"), GetLastError()));
+                    LOG_ERROR(conn->proxy->logger, (_T("Error %d while waiting for pipe handles"), GetLastError()));
                     return FALSE;
                 default:
-                    LOG_ERROR(conn->proxy->logger, (TEXT("Unknown return value from WaitForMultipleObjects")));
+                    LOG_ERROR(conn->proxy->logger, (_T("Unknown return value from WaitForMultipleObjects")));
                     return FALSE;
             }
         }
@@ -124,7 +125,7 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
             if (!success)
             {
                 LOG_ERROR(conn->proxy->logger, (
-                    TEXT("Error %d while getting remaining message length"),
+                    _T("Error %d while getting remaining message length"),
                     GetLastError()
                 ));
                 return FALSE;
@@ -135,7 +136,7 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
             if (!new_buffer)
             {
                 LOG_ERROR(conn->proxy->logger, (
-                    TEXT("Failed to resize incoming pipe data buffer from %lu to %lu bytes"),
+                    _T("Failed to resize incoming pipe data buffer from %lu to %lu bytes"),
                     (unsigned long)*buffer_size,
                     (unsigned long)new_buffer_size
                 ));
@@ -147,12 +148,12 @@ static BOOL receive_pipe_message(connection_data* const conn, char** const buffe
 
         else
         {
-            LOG_ERROR(conn->proxy->logger, (TEXT("Error reading from pipe: Error %d"), last_error));
+            LOG_ERROR(conn->proxy->logger, (_T("Error reading from pipe: Error %d"), last_error));
             return FALSE;
         }
     }
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Read message from pipe")));
+    LOG_TRACE(conn->proxy->logger, (_T("Read message from pipe")));
 
     *out_message_length = message_length;
     *out_exit = FALSE;
@@ -163,21 +164,21 @@ static BOOL send_socket_message(connection_data* const conn, char const* const m
 {
     ssize_t bytes_written;
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Sending message to socket")));
+    LOG_TRACE(conn->proxy->logger, (_T("Sending message to socket")));
 
     bytes_written = write(conn->data.socket.socketfd, message, message_length);
     if (bytes_written == -1)
     {
-        LOG_ERROR(conn->proxy->logger, (TEXT("Error %d while writing to socket"), errno));
+        LOG_ERROR(conn->proxy->logger, (_T("Error %d while writing to socket"), errno));
         return FALSE;
     }
     else if ((size_t)bytes_written != message_length)
     {
-        LOG_ERROR(conn->proxy->logger, (TEXT("Partial write to socket")));
+        LOG_ERROR(conn->proxy->logger, (_T("Partial write to socket")));
         return FALSE;
     }
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Sent message to socket")));
+    LOG_TRACE(conn->proxy->logger, (_T("Sent message to socket")));
 
     return TRUE;
 }
@@ -188,7 +189,7 @@ BOOL pipe_handler(connection_data* const conn)
     size_t buffer_size;
     BOOL ret;
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Entering pipe handler loop")));
+    LOG_TRACE(conn->proxy->logger, (_T("Entering pipe handler loop")));
 
     buffer = 0;
     buffer_size = 0;
@@ -209,8 +210,8 @@ BOOL pipe_handler(connection_data* const conn)
 
         if (LOG_IS_ENABLED(conn->proxy->logger, LOG_LEVEL_DEBUG))
         {
-            LOG_DEBUG(conn->proxy->logger, (TEXT("Passing %lu bytes from pipe to socket"), message_length));
-            dbg_output_bytes(conn->proxy->logger, TEXT("Message from pipe: "), buffer, message_length);
+            LOG_DEBUG(conn->proxy->logger, (_T("Passing %lu bytes from pipe to socket"), message_length));
+            dbg_output_bytes(conn->proxy->logger, _T("Message from pipe: "), buffer, message_length);
         }
 
         if (!send_socket_message(conn, buffer, message_length))
@@ -223,7 +224,7 @@ BOOL pipe_handler(connection_data* const conn)
     close_socket(conn, TRUE);
     close_pipe(conn, FALSE);
 
-    LOG_TRACE(conn->proxy->logger, (TEXT("Exited pipe handler loop")));
+    LOG_TRACE(conn->proxy->logger, (_T("Exited pipe handler loop")));
 
     return ret;
 }

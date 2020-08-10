@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 #include <winnt.h>
@@ -23,12 +24,12 @@ BOOL create_proxy(logger_instance* const logger, connection_paths const paths, H
 {
     proxy_data* proxy;
 
-    LOG_TRACE(logger, (TEXT("Creating proxy object")));
+    LOG_TRACE(logger, (_T("Creating proxy object")));
 
     proxy = (proxy_data*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(proxy_data));
     if (!proxy)
     {
-        LOG_CRITICAL(logger, (TEXT("Could not allocate proxy object (%lu bytes)"), sizeof(proxy_data)));
+        LOG_CRITICAL(logger, (_T("Could not allocate proxy object (%lu bytes)"), sizeof(proxy_data)));
         return FALSE;
     }
 
@@ -40,12 +41,12 @@ BOOL create_proxy(logger_instance* const logger, connection_paths const paths, H
     proxy->connect_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!proxy->connect_overlapped.hEvent)
     {
-        LOG_CRITICAL(logger, (TEXT("Could not create an event for asynchronous connecting")));
+        LOG_CRITICAL(logger, (_T("Could not create an event for asynchronous connecting")));
         HeapFree(GetProcessHeap(), 0, proxy);
         return FALSE;
     }
 
-    LOG_TRACE(logger, (TEXT("Created proxy object")));
+    LOG_TRACE(logger, (_T("Created proxy object")));
 
     *out_proxy = proxy;
     return TRUE;
@@ -58,7 +59,7 @@ void destroy_proxy(proxy_data* const proxy)
 
     logger = proxy->logger;
 
-    LOG_TRACE(logger, (TEXT("Destroying proxy object")));
+    LOG_TRACE(logger, (_T("Destroying proxy object")));
 
     assert(!proxy->connections_start || !proxy->connections_start->previous);
     assert(!proxy->connections_end || !proxy->connections_end->next);
@@ -77,7 +78,7 @@ void destroy_proxy(proxy_data* const proxy)
 
     HeapFree(GetProcessHeap(), 0, proxy);
 
-    LOG_TRACE(logger, (TEXT("Destroyed proxy object")));
+    LOG_TRACE(logger, (_T("Destroyed proxy object")));
 }
 
 /* Not thread-safe, but doesn't need to be. */
@@ -85,13 +86,13 @@ BOOL allocate_connection(proxy_data* const proxy, connection_data** const out_co
 {
     connection_list_entry* entry;
 
-    LOG_TRACE(proxy->logger, (TEXT("Allocating connection object")));
+    LOG_TRACE(proxy->logger, (_T("Allocating connection object")));
 
     entry = (connection_list_entry*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(connection_list_entry));
     if (!entry)
     {
         LOG_CRITICAL(proxy->logger, (
-            TEXT("Could not allocate connection data (%lu bytes)"),
+            _T("Could not allocate connection data (%lu bytes)"),
             sizeof(connection_list_entry)
         ));
         return FALSE;
@@ -111,7 +112,7 @@ BOOL allocate_connection(proxy_data* const proxy, connection_data** const out_co
         proxy->connections_end->next = entry;
     }
 
-    LOG_TRACE(proxy->logger, (TEXT("Allocated connection object")));
+    LOG_TRACE(proxy->logger, (_T("Allocated connection object")));
 
     *out_connection = &entry->connection;
     return TRUE;
@@ -122,7 +123,7 @@ void deallocate_connection(proxy_data* const proxy, connection_data* const conne
 {
 #   define entry ((connection_list_entry*)((char*)connection - offsetof(connection_list_entry, connection)))
 
-    LOG_TRACE(proxy->logger, (TEXT("Deallocating connection object")));
+    LOG_TRACE(proxy->logger, (_T("Deallocating connection object")));
 
     if (proxy->connections_start == entry)
         proxy->connections_start = entry->next;
@@ -136,7 +137,7 @@ void deallocate_connection(proxy_data* const proxy, connection_data* const conne
 
     HeapFree(GetProcessHeap(), 0, entry);
 
-    LOG_TRACE(proxy->logger, (TEXT("Deallocated connection object")));
+    LOG_TRACE(proxy->logger, (_T("Deallocated connection object")));
 
 #   undef entry
 }

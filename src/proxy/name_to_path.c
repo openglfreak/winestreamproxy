@@ -13,12 +13,12 @@
 
 #include <stddef.h>
 
+#include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 #include <winnt.h>
-#include <tchar.h>
 
-TCHAR const pipe_path_prefix[] = TEXT("\\\\.\\pipe\\");
+TCHAR const pipe_path_prefix[] = _T("\\\\.\\pipe\\");
 
 #define static_strlen(x) (sizeof(x) / sizeof(x[0]) - 1)
 
@@ -34,7 +34,7 @@ TCHAR* pipe_name_to_path(logger_instance* const logger, TCHAR const* const named
     if (!pipe_path)
     {
         LOG_ERROR(logger, (
-            TEXT("Failed to allocate %lu bytes"),
+            _T("Failed to allocate %lu bytes"),
             (unsigned long)(sizeof(TCHAR) * (static_strlen(pipe_path_prefix) + name_len + 1))
         ));
         return 0;
