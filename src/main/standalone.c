@@ -34,15 +34,29 @@ static TCHAR const* const log_level_prefixes[] = {
     _T("CRITICAL")
 };
 
+#define LOG_MESSAGE_LINE1_FMT _T("%s[%08x]: %s\n")
+#define LOG_MESSAGE_LINE2_FMT _T("                    At %s:%li\n")
+
 static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
 {
+#ifdef TRACE
+    TCHAR const* file;
+    long line;
+#endif
+
     (void)logger;
 
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
 
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s[%08x]: %s\n"), log_level_prefixes[level],
+#ifdef TRACE
+    log_get_file_and_line((void const**)&file, &line);
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT LOG_MESSAGE_LINE2_FMT,
+              log_level_prefixes[level], (unsigned int)GetCurrentThreadId(), (TCHAR const*)message, file, line);
+#else
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT, log_level_prefixes[level],
               (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
+#endif
 
     return 1;
 }
