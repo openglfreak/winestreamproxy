@@ -65,7 +65,6 @@ static TCHAR const* const log_level_prefixes[] = {
 static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
 {
     (void)logger;
-    (void)message;
 
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
