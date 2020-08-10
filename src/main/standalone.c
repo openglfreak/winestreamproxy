@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 
+#include <signal.h>
 #include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
@@ -70,6 +71,13 @@ WINAPI BOOL console_ctrl_handler(DWORD const ctrl_type)
             return TRUE;
     }
     return FALSE;
+}
+
+void signal_handler(int const signal)
+{
+    (void)signal;
+
+    SetEvent(exit_event);
 }
 
 int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
@@ -128,6 +136,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 
     if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
         LOG_ERROR(logger, (_T("Could not set console ctrl handler: Error %d"), GetLastError()));
+    signal(SIGTERM, signal_handler);
 
     enter_proxy_loop(proxy);
 
