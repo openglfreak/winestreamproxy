@@ -68,8 +68,8 @@ void log_destroy_logger(logger_instance* const logger)
         HeapFree(GetProcessHeap(), 0, logger);
 }
 
-int log_init_message_impl(logger_instance* const logger, LOG_LEVEL const level, void const* const file,
-                          unsigned char const file_char_size, long const line)
+static int log_init_message_impl2(logger_instance* const logger, LOG_LEVEL const level, void const* const file,
+                                  unsigned char const file_char_size, long const line)
 {
     thread_local_data* tls_data;
 
@@ -106,6 +106,19 @@ int log_init_message_impl(logger_instance* const logger, LOG_LEVEL const level, 
         tls_data->do_log = FALSE;
 
     return 1;
+}
+
+static int log_init_message_impl(logger_instance* const logger, LOG_LEVEL const level, void const* const file,
+                                 unsigned char const file_char_size, long const line)
+{
+    DWORD last_error;
+    int ret;
+
+    last_error = GetLastError();
+    ret = log_init_message_impl2(logger, level, file, file_char_size, line);
+    SetLastError(last_error);
+
+    return ret;
 }
 
 int log_init_message(logger_instance* const logger, LOG_LEVEL const level, char const* const file, long const line)
