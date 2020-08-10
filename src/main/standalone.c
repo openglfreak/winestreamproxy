@@ -8,6 +8,7 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
+#include "double_spawn.h"
 #include "standalone.h"
 #ifdef _UNICODE
 #include "wide_to_narrow.h"
@@ -45,17 +46,19 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
     return 1;
 }
 
+static double_spawn_data double_spawn;
+
 void running_callback(logger_instance* const logger, proxy_data* const proxy)
 {
-    (void)logger;
     (void)proxy;
 
-    FreeConsole();
+    double_spawn_finish(logger, &double_spawn);
 }
 
 int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 {
     logger_instance* logger;
+    DOUBLE_SPAWN_RETURN dsret;
     BOOL deallocate_pipe_path;
     connection_paths paths;
     HANDLE exit_event;
@@ -74,6 +77,10 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 #else
     log_set_min_level(logger, LOG_LEVEL_DEBUG);
 #endif
+
+    dsret = double_spawn_execute(logger, &double_spawn);
+    if (dsret != DOUBLE_SPAWN_RETURN_CONTINUE)
+        return dsret != DOUBLE_SPAWN_RETURN_EXIT ? 1 : 0;
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
