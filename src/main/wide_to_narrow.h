@@ -9,8 +9,8 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #pragma once
-#ifndef __WINESTREAMPROXY_MAIN_LOG_H__
-#define __WINESTREAMPROXY_MAIN_LOG_H__
+#ifndef __WINESTREAMPROXY_MAIN_WIDE_TO_NARROW_H__
+#define __WINESTREAMPROXY_MAIN_WIDE_TO_NARROW_H__
 
 #ifdef _UNICODE
 
@@ -31,4 +31,4 @@ LPSTR wide_to_narrow(logger_instance* logger, LPCWCH wide_path);
 
 #endif /* defined(_UNICODE) */
 
-#endif /* !defined(__WINESTREAMPROXY_MAIN_LOG_H__) */
+#endif /* !defined(__WINESTREAMPROXY_MAIN_WIDE_TO_NARROW_H__) */
