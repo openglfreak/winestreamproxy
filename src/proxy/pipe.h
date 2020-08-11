@@ -12,40 +12,32 @@
 #ifndef __WINESTREAMPROXY_PROXY_PIPE_H__
 #define __WINESTREAMPROXY_PROXY_PIPE_H__
 
+#include "data/connection_data.h"
+#include "data/pipe_data.h"
 #include <winestreamproxy/logger.h>
 
 #include <windef.h>
 #include <winbase.h>
-#include <winnt.h>
+#include <tchar.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-typedef struct pipe_data {
-    HANDLE handle;
-    HANDLE thread_exit_event;
-    OVERLAPPED read_overlapped;
-    BOOL read_is_overlapped;
-    OVERLAPPED write_overlapped;
-    BOOL write_is_overlapped;
-} pipe_data;
+extern BOOL pipe_create_server(logger_instance* logger, pipe_data* pipe, TCHAR const* pipe_path);
+extern BOOL pipe_server_start_accept(logger_instance* logger, pipe_data* pipe, BOOL* out_is_async,
+                                     OVERLAPPED* inout_accept_overlapped);
+extern BOOL pipe_prepare(logger_instance* logger, pipe_data* pipe_data);
+extern BOOL pipe_discard_prepared(logger_instance* logger, pipe_data* pipe_data);
+extern BOOL pipe_server_wait_accept(logger_instance* logger, pipe_data* pipe, HANDLE exit_event,
+                                    OVERLAPPED* inout_accept_overlapped);
+extern BOOL pipe_close_server(logger_instance* logger, pipe_data* pipe);
 
-struct connection_data;
+extern BOOL pipe_stop_thread(logger_instance* logger, pipe_data* pipe); /* Only called if status is 1 or 2. */
+extern BOOL pipe_handler(connection_data* conn);
 
-extern BOOL pipe_handler(struct connection_data* conn);
-
-extern BOOL create_pipe(logger_instance* logger, TCHAR const* path, HANDLE* pipe);
-
-extern BOOL start_connecting_pipe(logger_instance* logger, HANDLE pipe, BOOL* is_async, LPOVERLAPPED overlapped);
-
-extern BOOL wait_for_pipe_connection(logger_instance* logger, HANDLE exit_event, LPOVERLAPPED overlapped);
-
-extern BOOL prepare_pipe_data(logger_instance* logger, HANDLE pipe, pipe_data* pipe_data);
-
-extern void discard_prepared_pipe_data(logger_instance* logger, pipe_data* pipe_data);
-
-extern void close_pipe(struct connection_data* conn, BOOL exit_thread);
+extern BOOL pipe_send_message(logger_instance* logger, pipe_data* pipe, unsigned char const* message,
+                              size_t message_length);
 
 #ifdef __cplusplus
 }

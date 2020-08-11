@@ -9,23 +9,23 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #pragma once
-#ifndef __WINESTREAMPROXY_PROXY_PROXY_H__
-#define __WINESTREAMPROXY_PROXY_PROXY_H__
+#ifndef __WINESTREAMPROXY_PROXY_DATA_PROXY_DATA_H__
+#define __WINESTREAMPROXY_PROXY_DATA_PROXY_DATA_H__
 
-#include "data/proxy_data.h"
+#include "connection_list.h"
 #include <winestreamproxy/logger.h>
 #include <winestreamproxy/winestreamproxy.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* defined(__cplusplus) */
+#include <windef.h>
+#include <winbase.h>
 
-extern BOOL proxy_create(logger_instance* logger, proxy_parameters parameters, proxy_data** out_proxy);
-extern void proxy_enter_loop(proxy_data* proxy);
-extern void proxy_destroy(proxy_data* proxy);
+/* Already typedef'd in winestreamproxy.h. */
+struct proxy_data {
+    logger_instance*    logger;
+    proxy_parameters    parameters;
+    LONG volatile       is_running;
+    connection_list     conn_list;
+    OVERLAPPED          accept_overlapped;
+};
 
-#ifdef __cplusplus
-}
-#endif /* defined(__cplusplus) */
-
-#endif /* !defined(__WINESTREAMPROXY_PROXY_PROXY_H__) */
+#endif /* !defined(__WINESTREAMPROXY_PROXY_DATA_PROXY_DATA_H__) */

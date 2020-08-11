@@ -12,33 +12,26 @@
 #ifndef __WINESTREAMPROXY_PROXY_SOCKET_H__
 #define __WINESTREAMPROXY_PROXY_SOCKET_H__
 
-#include "connection.h"
+#include "data/connection_data.h"
+#include "data/socket_data.h"
 #include <winestreamproxy/logger.h>
 
-#include <windef.h>
-#include <sys/un.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-typedef struct socket_data {
-    struct sockaddr_un addr;
-    int eventfd;
-    int socketfd;
-} socket_data;
+extern BOOL socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
+extern BOOL socket_connect(logger_instance* logger, socket_data* socket);
+extern BOOL socket_disconnect(logger_instance* logger, socket_data* socket);
+extern BOOL socket_discard_prepared(logger_instance* logger, socket_data* socket);
 
-struct connection_data;
+extern BOOL socket_stop_thread(logger_instance* logger, socket_data* socket); /* Only called if status is 1 or 2. */
+extern BOOL socket_handler(connection_data* conn);
 
-extern BOOL socket_handler(struct connection_data* conn);
-
-extern BOOL prepare_socket(logger_instance* logger, char const* socket_path, socket_data* socket);
-
-extern void discard_prepared_socket(logger_instance* logger, socket_data* socket);
-
-extern BOOL connect_socket(logger_instance* logger, socket_data* socket);
-
-extern void close_socket(struct connection_data* conn, BOOL exit_thread);
+extern BOOL socket_send_message(logger_instance* logger, socket_data* socket, unsigned char const* message,
+                                size_t message_length);
 
 #ifdef __cplusplus
 }
