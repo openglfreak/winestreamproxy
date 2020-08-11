@@ -112,7 +112,7 @@ else
         exit 1
     fi
     # shellcheck disable=SC2016
-    printf 'warning: $WINE not set, using "%s"\n' "${WINE}" >&2
+    printf 'warning: $WINE not set, using "%s"\n' "${wine}" >&2
 fi
 
 if [ x"${wine#*/}"x != x"${wine}"x ] && [ -x "${wine}" ] || \
