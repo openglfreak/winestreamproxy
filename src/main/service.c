@@ -30,8 +30,8 @@ static logger_instance* logger;
 /*HANDLE service_event_source;*/
 TCHAR const service_name[] = TEXT("Named pipe to unix socket proxy");
 void CALLBACK service_proc(DWORD argc, LPTSTR* argv);
-SERVICE_TABLE_ENTRY const service_table[] = { { (LPTSTR)service_name, service_proc }, { 0 } };
-SERVICE_STATUS service_status = { 0 };
+SERVICE_TABLE_ENTRY const service_table[] = { { (LPTSTR)service_name, service_proc }, { 0, 0 } };
+SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE service_status_handle;
 HANDLE service_exit_event;
 
