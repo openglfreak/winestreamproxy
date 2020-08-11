@@ -9,6 +9,7 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #include "connection.h"
+#include "connection_list.h"
 #include "misc.h"
 #include "pipe.h"
 #include "socket.h"
@@ -101,6 +102,7 @@ void socket_cleanup(logger_instance* const logger, connection_data* const conn)
     {
         pipe_close_server(logger, &conn->pipe);
         socket_disconnect(logger, &conn->socket);
+        connection_list_deallocate_entry(logger, &conn->proxy->conn_list, conn);
     }
     else
     {
@@ -293,7 +295,6 @@ BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
 
     if (buffer)
         HeapFree(GetProcessHeap(), 0, buffer);
-    connection_close(conn);
 
     LOG_TRACE(logger, (_T("Exited socket handler loop")));
 
