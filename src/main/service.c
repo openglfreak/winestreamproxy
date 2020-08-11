@@ -125,7 +125,7 @@ void WINAPI service_ctrl_handler(DWORD control)
 void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
 {
     BOOL deallocate_pipe_path;
-    connection_paths paths;
+    proxy_parameters params;
     proxy_data* proxy;
 
     (void)argc;
@@ -163,8 +163,8 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
-        paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
-        if (!paths.named_pipe_path)
+        params.paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
+        if (!params.paths.named_pipe_path)
         {
             service_set_status_stopped(logger);
             return;
@@ -173,26 +173,28 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     }
     else
     {
-        paths.named_pipe_path = pipe_arg;
+        params.paths.named_pipe_path = pipe_arg;
         deallocate_pipe_path = FALSE;
     }
 
 #ifdef _UNICODE
-    paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
-    if (!paths.unix_socket_path)
+    params.paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
+    if (!params.paths.unix_socket_path)
     {
         service_set_status_stopped(logger);
         return;
     }
 #else
-    paths.unix_socket_path = socket_arg;
+    params.paths.unix_socket_path = socket_arg;
 #endif
 
-    service_exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if (!service_exit_event)
+    params.exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (!params.exit_event)
         return;
 
-    if (!create_proxy(logger, paths, service_exit_event, 0, &proxy))
+    params.state_change_callback = 0;
+
+    if (!proxy_create(logger, params, &proxy))
     {
         service_set_status_stopped(logger);
         return;
@@ -209,15 +211,15 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         return;
     }
 
-    enter_proxy_loop(proxy);
+    proxy_enter_loop(proxy);
 
-    destroy_proxy(proxy);
-    CloseHandle(service_exit_event);
+    proxy_destroy(proxy);
+    CloseHandle(params.exit_event);
 #ifdef _UNICODE
-    HeapFree(GetProcessHeap(), 0, (char*)paths.unix_socket_path);
+    HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
 #endif
     if (deallocate_pipe_path)
-        deallocate_path(paths.named_pipe_path);
+        deallocate_path(params.paths.named_pipe_path);
 
     service_status.dwControlsAccepted = 0;
     service_status.dwCurrentState = SERVICE_STOPPED;

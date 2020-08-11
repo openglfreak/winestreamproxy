@@ -8,112 +8,70 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
-#include "connection.h"
-#include "wait_thread.h"
+#include "data/connection_data.h"
+#include "socket.h"
 #include <winestreamproxy/logger.h>
 
-#include <errno.h>
 #include <stddef.h>
-#include <string.h>
 
-#include <sys/eventfd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <tchar.h>
-#include <unistd.h>
 #include <windef.h>
 #include <winnt.h>
 
-BOOL prepare_socket(logger_instance* const logger, char const* const socket_path, socket_data* const _socket)
+BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket_path, socket_data* const socket)
 {
-    size_t socket_path_len;
-
-    LOG_TRACE(logger, (_T("Preparing socket")));
-
-    socket_path_len = strlen(socket_path);
-    if (socket_path_len > sizeof(_socket->addr.sun_path) - 1)
-    {
-        LOG_CRITICAL(logger, (_T("Socket path too long")));
-        return FALSE;
-    }
-
-    RtlZeroMemory(&_socket->addr, sizeof(_socket->addr));
-    _socket->addr.sun_family = AF_UNIX;
-    RtlCopyMemory(_socket->addr.sun_path, socket_path, socket_path_len);
-
-    _socket->eventfd = eventfd(0, EFD_CLOEXEC);
-    if (_socket->eventfd == -1)
-    {
-        LOG_CRITICAL(logger, (_T("Failed to create eventfd: Error %d"), errno));
-        return FALSE;
-    }
-
-    _socket->socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (_socket->socketfd == -1)
-    {
-        LOG_CRITICAL(logger, (_T("Failed to create socket: Error %d"), errno));
-        close(_socket->eventfd);
-        return FALSE;
-    }
-
-    LOG_TRACE(logger, (_T("Prepared socket")));
+    (void)logger;
+    (void)unix_socket_path;
+    (void)socket;
 
     return TRUE;
 }
 
-void discard_prepared_socket(logger_instance* const logger, socket_data* const socket)
+BOOL socket_connect(logger_instance* const logger, socket_data* const socket)
 {
-    LOG_TRACE(logger, (_T("Discarding prepared socket")));
-
-    close(socket->eventfd);
-    close(socket->socketfd);
-
-    LOG_TRACE(logger, (_T("Discarded prepared socket")));
-}
-
-BOOL connect_socket(logger_instance* const logger, socket_data* const socket)
-{
-    LOG_TRACE(logger, (_T("Connecting socket")));
-
-    if (connect(socket->socketfd, (struct sockaddr*)&socket->addr, sizeof(socket->addr)) != 0)
-    {
-        LOG_ERROR(logger, (_T("Failed to connect to socket: Error %d"), errno));
-        return FALSE;
-    }
-
-    LOG_TRACE(logger, (_T("Connected socket")));
+    (void)logger;
+    (void)socket;
 
     return TRUE;
 }
 
-static BOOL signal_eventfd(logger_instance* const logger, int const eventfd)
+BOOL socket_disconnect(logger_instance* const logger, socket_data* const socket)
 {
-    static char one[8] = { 0, 0, 0, 0, 0, 0, 0, 1 };
-
-    if (write(eventfd, one, 8) != 8)
-    {
-        LOG_ERROR(logger, (_T("Could not send exit signal to socket thread")));
-        return FALSE;
-    }
+    (void)logger;
+    (void)socket;
 
     return TRUE;
 }
 
-void close_socket(connection_data* const conn, BOOL const exit_thread)
+BOOL socket_discard_prepared(logger_instance* const logger, socket_data* const socket)
 {
-    if (conn->closing.socket || conn->closed.socket)
-        return;
+    (void)logger;
+    (void)socket;
 
-    LOG_TRACE(conn->proxy->logger, (_T("Closing socket")));
+    return TRUE;
+}
 
-    if (exit_thread)
-        if (signal_eventfd(conn->proxy->logger, conn->data.socket.eventfd))
-            wait_for_thread(conn->proxy->logger, _T("socket"), conn->threads.socket);
+BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket)
+{
+    (void)logger;
+    (void)socket;
 
-    close(conn->data.socket.socketfd);
-    close(conn->data.socket.eventfd);
+    return TRUE;
+}
 
-    conn->closed.socket = TRUE;
+BOOL socket_handler(connection_data* const conn)
+{
+    (void)conn;
 
-    LOG_TRACE(conn->proxy->logger, (_T("Closed socket")));
+    return TRUE;
+}
+
+BOOL socket_send_message(logger_instance* const logger, socket_data* const socket, unsigned char const* const message,
+                         size_t const message_length)
+{
+    (void)logger;
+    (void)socket;
+    (void)message;
+    (void)message_length;
+
+    return TRUE;
 }

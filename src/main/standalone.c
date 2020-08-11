@@ -63,11 +63,14 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
 
 static double_spawn_data double_spawn;
 
-void running_callback(logger_instance* const logger, proxy_data* const proxy)
+void state_change_callback(logger_instance* const logger, proxy_data* const proxy, PROXY_STATE const prev_state,
+                           PROXY_STATE const new_state)
 {
     (void)proxy;
+    (void)prev_state;
 
-    double_spawn_finish(logger, &double_spawn);
+    if (new_state == PROXY_STATE_RUNNING)
+        double_spawn_finish(logger, &double_spawn);
 }
 
 static HANDLE exit_event;
@@ -99,7 +102,7 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
     logger_instance* logger;
     DOUBLE_SPAWN_RETURN dsret;
     BOOL deallocate_pipe_path;
-    connection_paths paths;
+    proxy_parameters params;
     proxy_data* proxy;
 
     if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
@@ -122,45 +125,48 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
-        paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
-        if (!paths.named_pipe_path)
+        params.paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
+        if (!params.paths.named_pipe_path)
             return 1;
         deallocate_pipe_path = TRUE;
     }
     else
     {
-        paths.named_pipe_path = pipe_arg;
+        params.paths.named_pipe_path = pipe_arg;
         deallocate_pipe_path = FALSE;
     }
 
 #ifdef _UNICODE
-    paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
-    if (!paths.unix_socket_path)
+    params.paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
+    if (!params.paths.unix_socket_path)
         return 1;
 #else
-    paths.unix_socket_path = socket_arg;
+    params.paths.unix_socket_path = socket_arg;
 #endif
 
-    exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if (!exit_event)
+    params.exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (!params.exit_event)
         return 1;
 
-    if (!create_proxy(logger, paths, exit_event, running_callback, &proxy))
+    params.state_change_callback = state_change_callback;
+
+    if (!proxy_create(logger, params, &proxy))
         return 1;
 
+    exit_event = params.exit_event;
     if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
         LOG_ERROR(logger, (_T("Could not set console ctrl handler: Error %d"), GetLastError()));
     signal(SIGTERM, signal_handler);
 
-    enter_proxy_loop(proxy);
+    proxy_enter_loop(proxy);
 
-    destroy_proxy(proxy);
-    CloseHandle(exit_event);
+    proxy_destroy(proxy);
+    CloseHandle(params.exit_event);
 #ifdef _UNICODE
-    HeapFree(GetProcessHeap(), 0, (char*)paths.unix_socket_path);
+    HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
 #endif
     if (deallocate_pipe_path)
-        deallocate_path(paths.named_pipe_path);
+        deallocate_path(params.paths.named_pipe_path);
     log_destroy_logger(logger);
 
     return 0;

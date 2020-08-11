@@ -8,10 +8,14 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
+#include "connection.h"
+#include "connection_list.h"
+#include "pipe.h"
 #include "proxy.h"
+#include "socket.h"
 #include <winestreamproxy/logger.h>
+#include <winestreamproxy/winestreamproxy.h>
 
-#include <assert.h>
 #include <stddef.h>
 
 #include <tchar.h>
@@ -19,8 +23,7 @@
 #include <winbase.h>
 #include <winnt.h>
 
-BOOL create_proxy(logger_instance* const logger, connection_paths const paths, HANDLE const exit_event,
-                  proxy_running_callback const running_callback, proxy_data** const out_proxy)
+BOOL proxy_create(logger_instance* const logger, proxy_parameters const parameters, proxy_data** const out_proxy)
 {
     proxy_data* proxy;
 
@@ -34,12 +37,10 @@ BOOL create_proxy(logger_instance* const logger, connection_paths const paths, H
     }
 
     proxy->logger = logger;
-    proxy->paths = paths;
-    proxy->exit_event = exit_event;
-    proxy->running_callback = running_callback;
+    proxy->parameters = parameters;
 
-    proxy->connect_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if (!proxy->connect_overlapped.hEvent)
+    proxy->accept_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (!proxy->accept_overlapped.hEvent)
     {
         LOG_CRITICAL(logger, (_T("Could not create an event for asynchronous connecting")));
         HeapFree(GetProcessHeap(), 0, proxy);
@@ -52,92 +53,167 @@ BOOL create_proxy(logger_instance* const logger, connection_paths const paths, H
     return TRUE;
 }
 
-void destroy_proxy(proxy_data* const proxy)
+void proxy_destroy(proxy_data* const proxy)
 {
     logger_instance* logger;
-    connection_list_entry* entry;
 
     logger = proxy->logger;
 
     LOG_TRACE(logger, (_T("Destroying proxy object")));
 
-    assert(!proxy->connections_start || !proxy->connections_start->previous);
-    assert(!proxy->connections_end || !proxy->connections_end->next);
-
-    entry = proxy->connections_start;
-    while (entry)
-    {
-        connection_list_entry* next;
-
-        next = entry->next;
-        HeapFree(GetProcessHeap(), 0, entry);
-        entry = next;
-    }
-
-    CloseHandle(proxy->connect_overlapped.hEvent);
+    CloseHandle(proxy->accept_overlapped.hEvent);
 
     HeapFree(GetProcessHeap(), 0, proxy);
 
     LOG_TRACE(logger, (_T("Destroyed proxy object")));
 }
 
-/* Not thread-safe, but doesn't need to be. */
-BOOL allocate_connection(proxy_data* const proxy, connection_data** const out_connection)
+static BOOL handle_new_connection(logger_instance* const logger, connection_data* const conn)
 {
-    connection_list_entry* entry;
+    LOG_TRACE(logger, (_T("Handling new client connection")));
 
-    LOG_TRACE(proxy->logger, (_T("Allocating connection object")));
-
-    entry = (connection_list_entry*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(connection_list_entry));
-    if (!entry)
-    {
-        LOG_CRITICAL(proxy->logger, (
-            _T("Could not allocate connection data (%lu bytes)"),
-            sizeof(connection_list_entry)
-        ));
+    if (!socket_connect(logger, &conn->socket))
         return FALSE;
-    }
 
-    if (!proxy->connections_end)
-    {
-        assert(!proxy->connections_start);
-        proxy->connections_start = entry;
-        proxy->connections_end = entry;
-    }
-    else
-    {
-        assert(proxy->connections_start);
-        assert(!proxy->connections_end->next);
-        entry->previous = proxy->connections_end;
-        proxy->connections_end->next = entry;
-    }
+    LOG_INFO(logger, (_T("Connected to server socket")));
 
-    LOG_TRACE(proxy->logger, (_T("Allocated connection object")));
+    if (!connection_launch_threads(conn))
+        return FALSE;
 
-    *out_connection = &entry->connection;
+    LOG_TRACE(logger, (_T("Threads signaled to start")));
+
     return TRUE;
 }
 
-/* Also not thread-safe. */
-void deallocate_connection(proxy_data* const proxy, connection_data* const connection)
+void proxy_enter_loop(proxy_data* const proxy)
 {
-#   define entry ((connection_list_entry*)((char*)connection - offsetof(connection_list_entry, connection)))
+    PROXY_STATE state;
+    connection_data* conn, * prev_conn;
+    BOOL is_async, stop, first_loop;
 
-    LOG_TRACE(proxy->logger, (_T("Deallocating connection object")));
+    state = PROXY_STATE_CREATED;
 
-    if (proxy->connections_start == entry)
-        proxy->connections_start = entry->next;
-    if (proxy->connections_end == entry)
-        proxy->connections_end = entry->previous;
+    if (InterlockedCompareExchange(&proxy->is_running, TRUE, FALSE) != FALSE)
+    {
+        LOG_CRITICAL(proxy->logger, (_T("Refusing to start proxy loop twice")));
+        return;
+    }
 
-    if (entry->previous)
-        entry->previous->next = entry->next;
-    if (entry->next)
-        entry->next->previous = entry->previous;
+    if (proxy->parameters.state_change_callback)
+    {
+        proxy->parameters.state_change_callback(proxy->logger, proxy, state, PROXY_STATE_STARTING);
+        state = PROXY_STATE_STARTING;
+    }
 
-    HeapFree(GetProcessHeap(), 0, entry);
+    LOG_TRACE(proxy->logger, (_T("Starting proxy loop")));
 
-    LOG_TRACE(proxy->logger, (_T("Deallocated connection object")));
+    first_loop = TRUE;
 
-#   undef entry
+    for (prev_conn = 0; TRUE; prev_conn = conn)
+    {
+        stop = FALSE;
+
+        if (!connection_list_allocate_entry(proxy->logger, &proxy->conn_list, &conn))
+        {
+            stop = TRUE;
+        }
+
+        connection_initialize(proxy, conn);
+
+        if (!stop && !pipe_create_server(proxy->logger, &conn->pipe, proxy->parameters.paths.named_pipe_path))
+        {
+            connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+            stop = TRUE;
+        }
+
+        if (!stop && !pipe_server_start_accept(proxy->logger, &conn->pipe, &is_async, &proxy->accept_overlapped))
+        {
+            pipe_close_server(proxy->logger, &conn->pipe);
+            connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+            stop = TRUE;
+        }
+
+        if (prev_conn)
+        {
+            if (stop)
+                socket_discard_prepared(proxy->logger, &prev_conn->socket);
+            if (stop || !handle_new_connection(proxy->logger, prev_conn))
+            {
+                connection_close(prev_conn);
+                break;
+            }
+        }
+
+        if (stop)
+            break;
+
+        if (!pipe_prepare(proxy->logger, &conn->pipe))
+        {
+            if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
+            pipe_close_server(proxy->logger, &conn->pipe);
+            connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+            break;
+        }
+
+        if (!socket_prepare(proxy->logger, proxy->parameters.paths.unix_socket_path, &conn->socket))
+        {
+            pipe_discard_prepared(proxy->logger, &conn->pipe);
+            if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
+            pipe_close_server(proxy->logger, &conn->pipe);
+            connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+            break;
+        }
+
+        if (!connection_prepare_threads(conn))
+        {
+            socket_discard_prepared(proxy->logger, &conn->socket);
+            pipe_discard_prepared(proxy->logger, &conn->pipe);
+            if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
+            pipe_close_server(proxy->logger, &conn->pipe);
+            connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+            break;
+        }
+
+        if (first_loop)
+        {
+            first_loop = FALSE;
+
+            if (proxy->parameters.state_change_callback)
+            {
+                proxy->parameters.state_change_callback(proxy->logger, proxy, state, PROXY_STATE_RUNNING);
+                state = PROXY_STATE_RUNNING;
+            }
+            LOG_INFO(proxy->logger, (_T("Started proxy loop")));
+        }
+
+        if (is_async)
+        {
+            if (!pipe_server_wait_accept(proxy->logger, &conn->pipe, proxy->parameters.exit_event,
+                                         &proxy->accept_overlapped))
+            {
+                /*if (is_async)*/ CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
+                connection_close(conn);
+                break;
+            }
+        }
+    }
+
+    if (proxy->parameters.state_change_callback)
+    {
+        proxy->parameters.state_change_callback(proxy->logger, proxy, state, PROXY_STATE_STOPPING);
+        state = PROXY_STATE_STOPPING;
+    }
+
+    while (proxy->conn_list.end)
+    {
+        SetEvent(proxy->parameters.exit_event);
+        Sleep(1);
+    }
+
+    LOG_INFO(proxy->logger, (_T("Stopped proxy loop")));
+
+    InterlockedExchange(&proxy->is_running, FALSE);
+
+    if (proxy->parameters.state_change_callback)
+        proxy->parameters.state_change_callback(proxy->logger, proxy, state, PROXY_STATE_STOPPED);
 }
