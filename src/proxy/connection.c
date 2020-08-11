@@ -113,9 +113,6 @@ void connection_close(connection_data* const conn)
 {
     LOG_TRACE(conn->proxy->logger, (_T("Closing connection")));
 
-    if (conn->pipe.thread.status == THREAD_STATUS_PREPARED)
-        pipe_close_server(conn->proxy->logger, &conn->pipe);
-
     thread_dispose(conn->proxy->logger, &pipe_thread_description, &conn->pipe.thread);
     thread_dispose(conn->proxy->logger, &socket_thread_description, &conn->socket.thread);
 
