@@ -71,8 +71,8 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
 
     /* I am not implementing this crap... */
     /*ReportEvent(service_event_source, log_level_types[level],*/
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s: %s\n"),
-              log_level_prefixes[level], (TCHAR const*)message);
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s[%08x]: %s\n"), log_level_prefixes[level],
+              (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
 
     return 1;
 }

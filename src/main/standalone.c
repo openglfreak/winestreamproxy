@@ -41,8 +41,8 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
 
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s: %s\n"),
-              log_level_prefixes[level], (TCHAR const*)message);
+    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, _T("%s[%08x]: %s\n"), log_level_prefixes[level],
+              (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
 
     return 1;
 }
