@@ -15,11 +15,17 @@
 #include "pipe_data.h"
 #include "socket_data.h"
 
+#include <windef.h>
+
 typedef struct connection_data {
     struct proxy_data* proxy;
 
     pipe_data   pipe;
     socket_data socket;
+
+    /* Used internally by the pipe and socket threads to make sure that
+       clean-up is only done once. */
+    LONG volatile   do_cleanup;
 } connection_data;
 
 #endif /* !defined(__WINESTREAMPROXY_PROXY_DATA_CONNECTION_DATA_H__) */

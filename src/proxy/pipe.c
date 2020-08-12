@@ -8,8 +8,10 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
-#include "data/connection_data.h"
+#include "connection.h"
 #include "pipe.h"
+#include "socket.h"
+#include "thread.h"
 #include <winestreamproxy/logger.h>
 
 #include <stddef.h>
@@ -75,8 +77,20 @@ BOOL pipe_close_server(logger_instance* const logger, pipe_data* const pipe)
 
 void pipe_cleanup(logger_instance* const logger, connection_data* const conn)
 {
-    (void)logger;
-    (void)conn;
+    LOG_TRACE(logger, (_T("Cleaning up after pipe thread")));
+
+    if (InterlockedIncrement(&conn->do_cleanup) >= 2)
+    {
+        socket_disconnect(logger, &conn->socket);
+        pipe_close_server(logger, &conn->pipe);
+    }
+    else
+    {
+        LOG_DEBUG(logger, (_T("Socket thread is still running, not closing pipe")));
+        thread_dispose(logger, &socket_thread_description, &conn->socket.thread);
+    }
+
+    LOG_TRACE(logger, (_T("Cleaned up after pipe thread")));
 }
 
 BOOL pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
