@@ -18,7 +18,7 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern int standalone_main(TCHAR* pipe_arg, TCHAR* socket_arg);
+extern int standalone_main(unsigned int verbose, TCHAR const* pipe_arg, TCHAR const* socket_arg);
 
 #ifdef __cplusplus
 }
