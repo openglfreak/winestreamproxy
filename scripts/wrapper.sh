@@ -41,6 +41,7 @@ fi
 
 # Run winestreamproxy launch script.
 # shellcheck source=start.sh
-. "${start_script}" </dev/null || exit
+run_start_script() { . "${start_script}"; }
+run_start_script </dev/null || exit
 # Run the supplied command.
 exec ${1+"$@"}

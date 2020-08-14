@@ -39,24 +39,21 @@ static TCHAR const* const log_level_prefixes[] = {
 
 static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
 {
-#ifdef TRACE
-    TCHAR const* file;
-    long line;
-#endif
-
-    (void)logger;
-
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
 
-#ifdef TRACE
-    log_get_file_and_line((void const**)&file, &line);
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT LOG_MESSAGE_LINE2_FMT,
-              log_level_prefixes[level], (unsigned int)GetCurrentThreadId(), (TCHAR const*)message, file, line);
-#else
-    _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT, log_level_prefixes[level],
-              (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
-#endif
+    if (level == LOG_LEVEL_TRACE || (logger && LOG_IS_ENABLED(logger, LOG_LEVEL_TRACE)))
+    {
+        TCHAR const* file;
+        long line;
+
+        log_get_file_and_line((void const**)&file, &line);
+        _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT LOG_MESSAGE_LINE2_FMT,
+                  log_level_prefixes[level], (unsigned int)GetCurrentThreadId(), (TCHAR const*)message, file, line);
+    }
+    else
+        _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT, log_level_prefixes[level],
+                  (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
 
     return 1;
 }
@@ -97,9 +94,10 @@ void signal_handler(int const signal)
     SetEvent(exit_event);
 }
 
-int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
+int standalone_main(unsigned int const verbose, TCHAR const* const pipe_arg, TCHAR const* const socket_arg)
 {
     logger_instance* logger;
+    LOG_LEVEL log_level;
     DOUBLE_SPAWN_RETURN dsret;
     BOOL deallocate_pipe_path;
     proxy_parameters params;
@@ -112,12 +110,17 @@ int standalone_main(TCHAR* const pipe_arg, TCHAR* const socket_arg)
     }
 
 #if defined(TRACE)
-    log_set_min_level(logger, LOG_LEVEL_TRACE);
+    log_level = LOG_LEVEL_TRACE;
 #elif defined(NDEBUG)
-    log_set_min_level(logger, LOG_LEVEL_INFO);
+    log_level = LOG_LEVEL_INFO;
 #else
-    log_set_min_level(logger, LOG_LEVEL_DEBUG);
+    log_level = LOG_LEVEL_DEBUG;
 #endif
+    if (verbose < log_level)
+        log_level = (LOG_LEVEL)((int)log_level - verbose);
+    else
+        log_level = (LOG_LEVEL)0;
+    log_set_min_level(logger, log_level);
 
     dsret = double_spawn_execute(logger, &double_spawn);
     if (dsret != DOUBLE_SPAWN_RETURN_CONTINUE)
