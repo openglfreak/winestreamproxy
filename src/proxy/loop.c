@@ -346,7 +346,7 @@ void enter_proxy_loop(proxy_data* proxy)
         if (first_loop)
         {
             if (proxy->running_callback)
-                proxy->running_callback(proxy);
+                proxy->running_callback(proxy->logger, proxy);
             LOG_INFO(proxy->logger, (_T("Started pipe server loop")));
             first_loop = FALSE;
         }

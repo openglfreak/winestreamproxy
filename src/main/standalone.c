@@ -45,8 +45,9 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
     return 1;
 }
 
-void running_callback(proxy_data* const proxy)
+void running_callback(logger_instance* const logger, proxy_data* const proxy)
 {
+    (void)logger;
     (void)proxy;
 
     FreeConsole();
