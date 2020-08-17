@@ -18,10 +18,18 @@
 #include <winbase.h>
 #include <sys/un.h>
 
+#ifdef __linux__
+#define socket_use_eventfd
+#endif
+
 typedef struct socket_data {
     struct sockaddr_un  addr;
     int                 fd;
+#ifdef socket_use_eventfd
     int                 thread_exit_eventfd;
+#else
+    int                 thread_exit_pipe[2];
+#endif
     thread_data         thread;
 } socket_data;
 
