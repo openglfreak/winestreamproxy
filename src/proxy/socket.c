@@ -20,7 +20,9 @@
 #include <stddef.h>
 
 #include <poll.h>
+#ifdef socket_use_eventfd
 #include <sys/eventfd.h>
+#endif
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <tchar.h>
@@ -47,18 +49,31 @@ BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket
     _socket->addr.sun_family = AF_UNIX;
     RtlCopyMemory(_socket->addr.sun_path, unix_socket_path, socket_path_len);
 
+#ifdef socket_use_eventfd
     _socket->thread_exit_eventfd = eventfd(0, EFD_CLOEXEC);
     if (_socket->thread_exit_eventfd == -1)
     {
         LOG_CRITICAL(logger, (_T("Failed to create eventfd: Error %d"), errno));
         return FALSE;
     }
+#else
+    if (pipe(_socket->thread_exit_pipe) == -1)
+    {
+        LOG_CRITICAL(logger, (_T("Failed to create pipe: Error %d"), errno));
+        return FALSE;
+    }
+#endif
 
     _socket->fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (_socket->fd == -1)
     {
         LOG_CRITICAL(logger, (_T("Failed to create socket: Error %d"), errno));
+#ifdef socket_use_eventfd
         close(_socket->thread_exit_eventfd);
+#else
+        close(_socket->thread_exit_pipe[0]);
+        close(_socket->thread_exit_pipe[1]);
+#endif
         return FALSE;
     }
 
@@ -87,7 +102,12 @@ BOOL socket_disconnect(logger_instance* const logger, socket_data* const socket)
     LOG_TRACE(logger, (_T("Closing socket")));
 
     close(socket->fd);
+#ifdef socket_use_eventfd
     close(socket->thread_exit_eventfd);
+#else
+    close(socket->thread_exit_pipe[0]);
+    close(socket->thread_exit_pipe[1]);
+#endif
 
     LOG_TRACE(logger, (_T("Closed socket")));
 
@@ -113,11 +133,11 @@ void socket_cleanup(logger_instance* const logger, connection_data* const conn)
     LOG_TRACE(logger, (_T("Cleaned up after socket thread")));
 }
 
-static BOOL signal_eventfd(logger_instance* const logger, int const eventfd)
+static BOOL signal_fd(logger_instance* const logger, int const fd)
 {
     static char one[8] = { 0, 0, 0, 0, 0, 0, 0, 1 };
 
-    if (write(eventfd, one, 8) != 8)
+    if (write(fd, one, 8) != 8)
     {
         LOG_ERROR(logger, (_T("Could not send exit signal to socket thread")));
         return FALSE;
@@ -132,7 +152,11 @@ BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket
 
     LOG_TRACE(logger, (_T("Stopping socket thread")));
 
-    if (!signal_eventfd(logger, socket->thread_exit_eventfd))
+#ifdef socket_use_eventfd
+    if (!signal_fd(logger, socket->thread_exit_eventfd))
+#else
+    if (!signal_fd(logger, socket->thread_exit_pipe[1]))
+#endif
         ret = FALSE;
     else if (!thread_wait(logger, &socket_thread_description, &socket->thread))
         ret = FALSE;
@@ -177,7 +201,11 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
     fds[0].fd = socket->fd;
     fds[0].events = POLLIN | POLLPRI | POLLHUP;
     fds[0].revents = 0;
+#ifdef socket_use_eventfd
     fds[1].fd = socket->thread_exit_eventfd;
+#else
+    fds[1].fd = socket->thread_exit_pipe[0];
+#endif
     fds[1].events = POLLIN | POLLPRI | POLLHUP;
     fds[1].revents = 0;
     while ((nfds = poll(fds, sizeof(fds) / sizeof(fds[0]), -1)) == 0 || nfds == EAGAIN || nfds == EINTR);
