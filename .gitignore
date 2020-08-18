@@ -23,3 +23,6 @@
 /out/wrapper.sh
 /out/start-debug.sh
 /out/wrapper-debug.sh
+/out/release.tar.gz
+/out/debug.tar.gz
+/out/source.tar.gz

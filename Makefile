@@ -22,6 +22,7 @@ CP = cp -LRpf --
 TOUCH = touch --
 RM = rm -f --
 RMDIR = rmdir --
+TAR = tar -czf
 
 _include_stdarg = -include stdarg.h  # Work around Wine headers bug in 32-bit mode.
 
@@ -103,6 +104,25 @@ $(OUT)/wrapper-debug.sh: scripts/wrapper.sh $(OUT)/start-debug.sh
 	$(CP) scripts/wrapper.sh $(OUT)/wrapper-debug.sh
 	$(TOUCH) $(OUT)/wrapper-debug.sh
 
+release-tarball: $(OUT)/release.tar.gz
+debug-tarball: $(OUT)/debug.tar.gz
+source-tarball: $(OUT)/source.tar.gz
+
+$(OUT)/release.tar.gz: $(OUT)/.version $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o \
+                       $(OUT)/settings.conf $(OUT)/start.sh $(OUT)/wrapper.sh Makefile
+	cd $(OUT) && \
+	$(TAR) release.tar.gz .version winestreamproxy.exe.so winestreamproxy.exe.dbg.o \
+	                      settings.conf start.sh wrapper.sh
+$(OUT)/debug.tar.gz: $(OUT)/.version-debug $(OUT)/winestreamproxy-debug.exe.so $(OUT)/settings.conf \
+                     $(OUT)/start-debug.sh $(OUT)/wrapper-debug.sh Makefile
+	cd $(OUT) && \
+	$(TAR) debug.tar.gz .version-debug winestreamproxy-debug.exe.so settings.conf \
+	                    start-debug.sh wrapper-debug.sh
+$(OUT)/source.tar.gz: gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/version.res $(OBJ)/.version $(sources) \
+                      $(headers) Makefile
+	$(TAR) $(OUT)/source.tar.gz gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/version.res $(OBJ)/.version \
+	                            $(sources) $(headers) Makefile
+
 clean:
 	$(RM) $(OBJ)/.version
 	$(RM) $(OBJ)/version.h
@@ -118,8 +138,11 @@ clean:
 	$(RM) $(OUT)/wrapper.sh
 	$(RM) $(OUT)/start-debug.sh
 	$(RM) $(OUT)/wrapper-debug.sh
+	$(RM) $(OUT)/release.tar.gz
+	$(RM) $(OUT)/debug.tar.gz
+	$(RM) $(OUT)/source.tar.gz
 	-$(RMDIR) $(OBJ) 2>/dev/null || :
 	-$(RMDIR) $(OUT) 2>/dev/null || :
 
-.PHONY: all release debug clean
+.PHONY: all release debug release-tarball debug-tarball source-tarball clean
 .ONESHELL:
