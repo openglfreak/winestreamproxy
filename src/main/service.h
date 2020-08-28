@@ -18,7 +18,7 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern BOOL try_register_service(unsigned int verbose, TCHAR const* pipe_arg, TCHAR const* socket_arg);
+extern int service_main(unsigned int verbose, int foreground, TCHAR const* pipe_arg, TCHAR const* socket_arg);
 
 #ifdef __cplusplus
 }

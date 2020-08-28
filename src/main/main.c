@@ -9,6 +9,7 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #include "argparser.h"
+#include "double_spawn.h"
 #include "service.h"
 #include "standalone.h"
 #include <winestreamproxy/logger.h>
@@ -59,6 +60,7 @@ typedef struct main_option_values {
     int show_help;
     int show_version;
     unsigned int verbose;
+    int foreground;
     int svchost;
     TCHAR const* pipe_name;
     TCHAR const* socket_path;
@@ -70,13 +72,14 @@ typedef struct main_positionals {
 } main_positionals;
 
 argparser_option_list_entry main_arg_option_list[] = {
-    { _T("h"),  _T("help"),     ARGPARSER_OPTION_TYPE_PRESENCE,     0, offsetof(main_option_values, show_help) },
-    { 0,        _T("version"),  ARGPARSER_OPTION_TYPE_PRESENCE,     0, offsetof(main_option_values, show_version) },
-    { _T("v"),  _T("verbose"),  ARGPARSER_OPTION_TYPE_ACCUMULATOR,  0, offsetof(main_option_values, verbose) },
-    { 0,        _T("svchost"),  ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, svchost) },
-    { _T("p"),  _T("pipe"),     ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, pipe_name) },
-    { _T("s"),  _T("socket"),   ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, socket_path) },
-    { 0,        0,              (ARGPARSER_OPTION_TYPE)0,           0, 0 }
+    { _T("h"),  _T("help"),         ARGPARSER_OPTION_TYPE_PRESENCE,     0, offsetof(main_option_values, show_help) },
+    { 0,        _T("version"),      ARGPARSER_OPTION_TYPE_PRESENCE,     0, offsetof(main_option_values, show_version) },
+    { _T("v"),  _T("verbose"),      ARGPARSER_OPTION_TYPE_ACCUMULATOR,  0, offsetof(main_option_values, verbose) },
+    { _T("f"),  _T("foreground"),   ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, foreground) },
+    { 0,        _T("svchost"),      ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, svchost) },
+    { _T("p"),  _T("pipe"),         ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, pipe_name) },
+    { _T("s"),  _T("socket"),       ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, socket_path) },
+    { 0,        0,                  (ARGPARSER_OPTION_TYPE)0,           0, 0 }
 };
 
 static void output_argparser_error(logger_instance* const logger, ARGPARSER_PARSE_RETURN const argp_ret)
@@ -166,6 +169,7 @@ static void print_help(TCHAR const* const arg0)
         _T("-h, --help             Show this help message and exit\n")
         _T("    --version          Show the version number and exit\n")
         _T("-v, --verbose          Be more verbose (can be specified multiple times)\n")
+        _T("-f, --foreground       Do not daemonize\n")
         _T("-p, --pipe <name>      Explicitly specify the pipe name\n")
         _T("-s, --socket <path>    Explicitly specify the socket path\n"),
         exe
@@ -177,10 +181,16 @@ extern "C"
 #endif /* defined(__cplusplus) */
 int __cdecl _tmain(int const argc, TCHAR* argv[])
 {
+    BOOL exit;
+    int dsret;
     logger_instance* early_logger;
     main_option_values optvals;
     main_positionals positionals;
     size_t i;
+
+    dsret = double_spawn_main_hook(&exit);
+    if (exit)
+        return dsret;
 
     if (!log_create_logger(early_log_message, (unsigned char)sizeof(TCHAR), &early_logger))
     {
@@ -252,6 +262,8 @@ int __cdecl _tmain(int const argc, TCHAR* argv[])
     HeapFree(GetProcessHeap(), 0, positionals.positionals);
     log_destroy_logger(early_logger);
 
-    if (optvals.svchost) return try_register_service(optvals.verbose, optvals.pipe_name, optvals.socket_path);
-    else                 return standalone_main(optvals.verbose, optvals.pipe_name, optvals.socket_path);
+    if (optvals.svchost)
+        return service_main(optvals.verbose, optvals.foreground, optvals.pipe_name, optvals.socket_path);
+    else
+        return standalone_main(optvals.verbose, optvals.foreground, optvals.pipe_name, optvals.socket_path);
 }
