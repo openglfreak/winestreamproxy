@@ -263,8 +263,15 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     log_destroy_logger(logger);
 }
 
-BOOL try_register_service(unsigned int const _verbose, TCHAR const* const _pipe_arg, TCHAR const* const _socket_arg)
+int service_main(unsigned int const _verbose, int const foreground, TCHAR const* const _pipe_arg,
+                 TCHAR const* const _socket_arg)
 {
+    if (foreground)
+    {
+        log_message(0, LOG_LEVEL_CRITICAL, _T("Can not start service in foreground"));
+        return FALSE;
+    }
+
     verbose = _verbose;
     pipe_arg = _pipe_arg;
     socket_arg = _socket_arg;
