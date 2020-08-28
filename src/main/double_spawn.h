@@ -22,18 +22,12 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-typedef struct double_spawn_data {
-    HANDLE event;
-} double_spawn_data;
+typedef int (*double_spawn_callback)(void* aux_data, size_t aux_data_size);
 
-typedef enum DOUBLE_SPAWN_RETURN {
-    DOUBLE_SPAWN_RETURN_EXIT,
-    DOUBLE_SPAWN_RETURN_CONTINUE,
-    DOUBLE_SPAWN_RETURN_ERROR
-} DOUBLE_SPAWN_RETURN;
-
-extern DOUBLE_SPAWN_RETURN double_spawn_execute(logger_instance* logger, double_spawn_data* data);
-extern void double_spawn_finish(logger_instance* logger, double_spawn_data* data);
+extern int double_spawn_main_hook(BOOL* out_exit);
+extern BOOL double_spawn_fork(logger_instance* logger, double_spawn_callback callback, void const* aux_data,
+                              size_t aux_data_size);
+extern void double_spawn_exit_parent(logger_instance* logger);
 
 #ifdef __cplusplus
 }
