@@ -55,11 +55,11 @@ sources = src/logger/logger.c src/main/argparser.c src/main/double_spawn.c src/m
           src/proxy/misc.c src/proxy/name_to_path.c src/proxy/pipe.c src/proxy/proxy.c src/proxy/socket.c \
           src/proxy/thread.c
 headers = include/winestreamproxy/logger.h include/winestreamproxy/winestreamproxy.h src/main/argparser.h \
-          src/main/double_spawn.h src/main/service.h src/main/standalone.h src/main/wide_to_narrow.h \
-          src/proxy/connection.h src/proxy/connection_list.h src/proxy/data/connection_data.h \
-          src/proxy/data/connection_list.h src/proxy/misc.h src/proxy/data/pipe_data.h src/proxy/data/proxy_data.h \
-          src/proxy/data/socket_data.h src/proxy/data/thread_data.h src/proxy/pipe.h src/proxy/proxy.h \
-          src/proxy/socket.h src/proxy/thread.h
+          src/main/attributes.h src/main/double_spawn.h src/main/service.h src/main/standalone.h \
+          src/main/wide_to_narrow.h src/proxy/connection.h src/proxy/connection_list.h \
+          src/proxy/data/connection_data.h src/proxy/data/connection_list.h src/proxy/misc.h src/proxy/data/pipe_data.h \
+          src/proxy/data/proxy_data.h src/proxy/data/socket_data.h src/proxy/data/thread_data.h src/proxy/pipe.h \
+          src/proxy/proxy.h src/proxy/socket.h src/proxy/thread.h
 
 all: release
 release: $(OUT)/winestreamproxy.exe.so $(OUT)/start.sh $(OUT)/wrapper.sh
