@@ -13,7 +13,8 @@
 : "${script_dir:="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"}"
 
 # Make sure XDG_RUNTIME_DIR is set.
-if ! [ "${XDG_RUNTIME_DIR+set}" = 'set' ]; then
+# shellcheck disable=SC1011,SC2026
+if ! [ x"${XDG_RUNTIME_DIR+set}"x = x'set'x ]; then
     export XDG_RUNTIME_DIR=/tmp
     # shellcheck disable=SC2016
     printf 'warning: $XDG_RUNTIME_DIR not set, using %s\n' "${XDG_RUNTIME_DIR}" >&2
