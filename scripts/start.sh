@@ -38,8 +38,7 @@ if ! [ -e "${socket_path}" ]; then
 fi
 
 # Switch to debug exe if the script name is start-debug.
-# shellcheck disable=SC1011,SC2026
-if ! [ x"${exe_name+set}"x = x'set'x ]; then
+if ! [ x"${exe_name+set}" = x'set' ]; then
     case "${0##*/}" in
         start-debug|start-debug.sh)
             exe_name=winestreamproxy-debug.exe.so;;
@@ -49,8 +48,7 @@ if ! [ x"${exe_name+set}"x = x'set'x ]; then
 fi
 
 # Find base directory.
-# shellcheck disable=SC1011,SC2026
-if ! [ x"${base_dir+set}"x = x'set'x ]; then
+if ! [ x"${base_dir+set}" = x'set' ]; then
     if [ -e "${script_dir}/${exe_name}" ]; then
         base_dir="${script_dir}"
     elif [ -e "${script_dir}/../${exe_name}" ]; then
@@ -94,15 +92,15 @@ is_in_path() {
 }
 
 # Find wine executable path.
-# shellcheck disable=SC1011,SC2026,SC2153
-if [ x"${WINE+set}"x = x'set'x ]; then
+# shellcheck disable=SC2153
+if [ x"${WINE+set}" = x'set' ]; then
     wine="${WINE}"
 else
-    if ! [ x"${WINEARCH+set}"x = x'set'x ] && \
+    if ! [ x"${WINEARCH+set}" = x'set' ] && \
        is_prefix_win64 "${WINEPREFIX:-$HOME/.wine}"; then
         WINEARCH=win64
     fi
-    if [ x"${WINEARCH}"x = x'win64'x ] && is_elf64 "${base_dir}/${exe_name}" && \
+    if [ x"${WINEARCH}" = x'win64' ] && is_elf64 "${base_dir}/${exe_name}" && \
        { is_in_path wine64 || wine64 --version > /dev/null 2>&1; }; then
         wine=wine64
     elif is_in_path wine || wine --version > /dev/null 2>&1; then
@@ -116,7 +114,7 @@ else
     printf 'warning: $WINE not set, using "%s"\n' "${wine}" >&2
 fi
 
-if [ x"${wine#*/}"x != x"${wine}"x ] && [ -x "${wine}" ] || \
+if [ x"${wine#*/}" != x"${wine}" ] && [ -x "${wine}" ] || \
    is_in_path "${wine}"; then
     # shellcheck disable=SC2034
     _wine="${wine}"

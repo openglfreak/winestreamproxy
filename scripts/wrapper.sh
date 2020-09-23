@@ -24,8 +24,7 @@ case "${0##*/}" in
     *)
         sh1=; sh2=.sh; start_script=start;;
 esac
-# shellcheck disable=SC1011,SC2026
-if [ x"$start_script"x = x'start-debug'x ]; then
+if [ x"$start_script" = x'start-debug' ]; then
     exe_name=winestreamproxy-debug.exe.so
 fi
 if [ -e "${script_dir}/${start_script}${sh1}" ]; then
