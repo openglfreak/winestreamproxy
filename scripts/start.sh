@@ -74,7 +74,7 @@ is_prefix_win64() {
 # Function that can be used to check if a file is in 64-bit ELF format.
 is_elf64() {
     od -N 5 -t x1 -- "$1" | \
-    grep -q -m 1 '^[^[:space:]][^[:space:]]*[[:space:]][[:space:]]*7f[[:space:]][[:space:]]*45[[:space:]][[:space:]]*4c[[:space:]][[:space:]]*46[[:space:]][[:space:]]*02$' && \
+    grep -q '^[^[:space:]][^[:space:]]*[[:space:]][[:space:]]*7f[[:space:]][[:space:]]*45[[:space:]][[:space:]]*4c[[:space:]][[:space:]]*46[[:space:]][[:space:]]*02$' && \
     return || return 1
 }
 
