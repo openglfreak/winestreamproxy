@@ -121,7 +121,7 @@ if [ x"${wine#*/}"x != x"${wine}"x ] && [ -x "${wine}" ] || \
     # shellcheck disable=SC2034
     _wine="${wine}"
     # shellcheck disable=SC2016
-    wine='${_wine}'
+    wine='"${_wine}"'
 fi
 
 : "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
