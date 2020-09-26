@@ -12,27 +12,66 @@
 # https://stackoverflow.com/a/29835459
 : "${script_dir:="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"}"
 
-# Load settings.conf.
-if [ -e ./settings.conf ]; then
-    # shellcheck source=settings.conf
-    . ./settings.conf
-elif [ -e "${script_dir}/settings.conf" ]; then
-    # shellcheck source=settings.conf
-    . "${script_dir}/settings.conf"
+# shellcheck disable=SC2050
+if [ x'@prefix_defined@' = x'true' ]; then
+    prefix='@prefix@'
 else
-    printf 'error: settings.conf not found\n' >&2
-    exit 1
+    prefix='/usr/local'
 fi
+
+# Splits the first parameter using the second parameter as the delimiter,
+# appends the result to the end of the parameter list, and executes the
+# resulting command.
+split() {
+    IFS="$1" eval 'set -- "$@" $2'
+    shift 2
+    "$@"
+}
+
+# Calls the function in the first parameter with each of the following
+# parameters in reverse order separately.
+foreach_reverse() {
+    set -- "$(($#+1))" "$@"
+    while [ "$1" -ge '3' ]; do
+        eval "\"$2\" \"\$$1\""
+        eval "shift; set -- '$(($1-1))' \"\$@\""
+    done
+}
+
+# Define settings helper functions.
+settings_found=false
+load_settings_file() {
+    if [ -e "$1" ]; then
+        # shellcheck source=settings.conf
+        . "$1"
+        settings_found=true
+    fi
+}
+check_settings_found() {
+    if [ x"${settings_found}" != x'true' ]; then
+        printf 'error: configuration file not found\n' >&2
+        exit 1
+    fi
+}
+# Load settings.
+load_settings_file "${script_dir}/settings.conf"
+load_settings_file "${prefix}/lib/winestreamproxy/settings.conf"
+f() { load_settings_file "$1/winestreamproxy/settings.conf"; };
+split : "${XDG_CONFIG_DIRS:-/etc/xdg}" foreach_reverse f
+load_settings_file \
+    "${XDG_CONFIG_HOME:-${HOME}/.config}/winestreamproxy/settings.conf"
+load_settings_file ./winestreamproxy.conf
+check_settings_found
 
 # Check whether the socket exists.
 if ! [ -e "${socket_path}" ]; then
     printf 'warning: %s does not exist\n' "${socket_path}" >&2
 fi
 
-# Switch to debug exe if the script name is start-debug.
+# Switch to debug exe if the script name ends with -debug.
 if ! [ x"${exe_name+set}" = x'set' ]; then
     case "${0##*/}" in
-        start-debug|start-debug.sh)
+        start-debug|start-debug.sh|winestreamproxy-debug)
             exe_name=winestreamproxy-debug.exe.so;;
         *)
             exe_name=winestreamproxy.exe.so;;
@@ -43,12 +82,12 @@ fi
 if ! [ x"${base_dir+set}" = x'set' ]; then
     if [ -e "${script_dir}/${exe_name}" ]; then
         base_dir="${script_dir}"
-    elif [ -e "${script_dir}/../${exe_name}" ]; then
-        # https://stackoverflow.com/a/29835459
-        base_dir="$(CDPATH='' cd -- "${script_dir}/.." && pwd -P)"
     elif [ -e "${script_dir}/../out/${exe_name}" ]; then
         # https://stackoverflow.com/a/29835459
         base_dir="$(CDPATH='' cd -- "${script_dir}/../out" && pwd -P)"
+    elif [ -e "${prefix}/lib/winestreamproxy/${exe_name}" ]; then
+        # https://stackoverflow.com/a/29835459
+        base_dir="$(CDPATH='' cd -- "${prefix}/lib/winestreamproxy" && pwd -P)"
     else
         printf 'error: %s not found\n' "${exe_name}" >&2
         exit 1

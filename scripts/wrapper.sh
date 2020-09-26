@@ -15,18 +15,22 @@
 
 # Use start-debug if the script name is wrapper-debug.
 case "${0##*/}" in
+    winestreamproxy-wrapper-debug)
+        sh1=; sh2=.sh; start_script=winestreamproxy-debug;;
     wrapper-debug.sh)
         sh1=.sh; sh2=; start_script=start-debug;;
     wrapper-debug)
         sh1=; sh2=.sh; start_script=start-debug;;
+    winestreamproxy-wrapper)
+        sh1=; sh2=.sh; start_script=winestreamproxy;;
     *.sh)
         sh1=.sh; sh2=; start_script=start;;
     *)
         sh1=; sh2=.sh; start_script=start;;
 esac
-if [ x"$start_script" = x'start-debug' ]; then
+case "$start_script" in *-debug)
     exe_name=winestreamproxy-debug.exe.so
-fi
+esac
 if [ -e "${script_dir}/${start_script}${sh1}" ]; then
     start_script="${script_dir}/${start_script}${sh1}"
 elif [ -e "${script_dir}/${start_script}${sh2}" ]; then

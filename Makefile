@@ -12,6 +12,7 @@
 
 OUT = out
 OBJ = obj
+PREFIX = /usr/local
 
 MKDIR = mkdir -p --
 WRC = wrc
@@ -23,6 +24,9 @@ TOUCH = touch --
 RM = rm -f --
 RMDIR = rmdir --
 TAR = tar -czf
+AWK = awk
+REPLACE = $(AWK) 'BEGIN { FS = ARGV[1]; delete ARGV[1]; OFS = ARGV[2]; delete ARGV[2]; } { $$1 = $$1; print; }'
+CHMODX = chmod a+x
 
 _include_stdarg = -include stdarg.h  # Work around Wine headers bug in 32-bit mode.
 
@@ -123,6 +127,65 @@ $(OUT)/source.tar.gz: gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/vers
 	$(TAR) $(OUT)/source.tar.gz gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/version.res $(OBJ)/.version \
 	                            $(sources) $(headers) Makefile
 
+install: install-release
+install-release: $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so \
+                 $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o $(PREFIX)/lib/winestreamproxy/settings.conf \
+                 $(PREFIX)/bin/winestreamproxy $(PREFIX)/bin/winestreamproxy-wrapper
+install-debug: $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so $(PREFIX)/lib/winestreamproxy/settings.conf \
+               $(PREFIX)/bin/winestreamproxy-debug $(PREFIX)/bin/winestreamproxy-wrapper-debug
+
+$(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o: \
+        $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o
+	$(MKDIR) $(PREFIX)/lib/winestreamproxy
+	$(CP) $(OUT)/winestreamproxy.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(CP) $(OUT)/winestreamproxy.exe.dbg.o $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+
+$(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so: $(OUT)/winestreamproxy-debug.exe.so
+	$(MKDIR) $(PREFIX)/lib/winestreamproxy
+	$(CP) $(OUT)/winestreamproxy-debug.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+
+$(PREFIX)/lib/winestreamproxy/settings.conf: $(OUT)/settings.conf
+	$(MKDIR) $(PREFIX)/lib/winestreamproxy
+	$(CP) $(OUT)/settings.conf $(PREFIX)/lib/winestreamproxy/settings.conf
+	$(TOUCH) $(PREFIX)/lib/winestreamproxy/settings.conf
+
+$(PREFIX)/bin/winestreamproxy: $(OUT)/start.sh $(PREFIX)/lib/winestreamproxy/settings.conf
+	$(MKDIR) $(PREFIX)/bin
+	$(REPLACE) @prefix@ $(PREFIX) $(OUT)/start.sh | $(REPLACE) @prefix_defined@ true > $(PREFIX)/bin/winestreamproxy
+	$(CHMODX) $(PREFIX)/bin/winestreamproxy
+$(PREFIX)/bin/winestreamproxy-wrapper: $(OUT)/wrapper.sh $(PREFIX)/bin/winestreamproxy
+	$(MKDIR) $(PREFIX)/bin
+	$(CP) $(OUT)/wrapper.sh $(PREFIX)/bin/winestreamproxy-wrapper
+	$(TOUCH) $(PREFIX)/bin/winestreamproxy-wrapper
+
+$(PREFIX)/bin/winestreamproxy-debug: $(OUT)/start-debug.sh $(PREFIX)/lib/winestreamproxy/settings.conf
+	$(MKDIR) $(PREFIX)/bin
+	$(REPLACE) @prefix@ $(PREFIX) $(OUT)/start-debug.sh | $(REPLACE) @prefix_defined@ true > \
+	    $(PREFIX)/bin/winestreamproxy-debug
+	$(CHMODX) $(PREFIX)/bin/winestreamproxy-debug
+$(PREFIX)/bin/winestreamproxy-wrapper-debug: $(OUT)/wrapper-debug.sh $(PREFIX)/bin/winestreamproxy-debug
+	$(MKDIR) $(PREFIX)/bin
+	$(CP) $(OUT)/wrapper-debug.sh $(PREFIX)/bin/winestreamproxy-wrapper-debug
+	$(TOUCH) $(PREFIX)/bin/winestreamproxy-wrapper-debug
+
+uninstall: uninstall-release uninstall-debug
+uninstall-release:
+	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+	$(RM) $(PREFIX)/lib/winestreamproxy/settings.conf
+	-$(RMDIR) $(PREFIX)/lib/winestreamproxy 2>/dev/null || :
+	$(RM) $(PREFIX)/bin/winestreamproxy
+	$(RM) $(PREFIX)/bin/winestreamproxy-wrapper
+uninstall-debug:
+	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+	$(RM) $(PREFIX)/lib/winestreamproxy/settings.conf
+	-$(RMDIR) $(PREFIX)/lib/winestreamproxy 2>/dev/null || :
+	$(RM) $(PREFIX)/bin/winestreamproxy-debug
+	$(RM) $(PREFIX)/bin/winestreamproxy-wrapper-debug
+
 clean:
 	$(RM) $(OBJ)/.version
 	$(RM) $(OBJ)/version.h
@@ -144,5 +207,6 @@ clean:
 	-$(RMDIR) $(OBJ) 2>/dev/null || :
 	-$(RMDIR) $(OUT) 2>/dev/null || :
 
-.PHONY: all release debug release-tarball debug-tarball source-tarball clean
+.PHONY: all release debug release-tarball debug-tarball source-tarball install install-release install-debug uninstall \
+        uninstall-release uninstall-debug clean
 .ONESHELL:
