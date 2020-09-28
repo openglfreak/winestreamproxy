@@ -14,8 +14,8 @@ OUT = out
 
 MKDIR = mkdir -p --
 WINEGCC = winegcc
-OBJCOPY = x86_64-w64-mingw32-objcopy
-STRIP = x86_64-w64-mingw32-strip
+OBJCOPY = objcopy
+STRIP = strip
 CP = cp -LRpf --
 TOUCH = touch --
 RM = rm -f --
