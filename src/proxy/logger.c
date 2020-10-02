@@ -20,10 +20,10 @@
 #include <winbase.h>
 #include <winnls.h>
 
-DWORD tls_index;
-BOOL tls_index_initialized = FALSE;
+DWORD fls_index;
+BOOL fls_index_initialized = FALSE;
 
-typedef struct thread_local_data {
+typedef struct fiber_local_data {
     BOOL do_log;
     LOG_LEVEL level;
     void const* file;
@@ -31,7 +31,13 @@ typedef struct thread_local_data {
     void const* converted_file;
     long line;
     logger_instance* logger;
-} thread_local_data;
+} fiber_local_data;
+
+void CALLBACK fls_callback(PVOID lpFlsData)
+{
+    if (lpFlsData)
+        HeapFree(GetProcessHeap(), 0, lpFlsData);
+}
 
 int log_create_logger(log_message_callback const log_message, unsigned char const character_size,
                       logger_instance** const out_logger)
@@ -41,12 +47,12 @@ int log_create_logger(log_message_callback const log_message, unsigned char cons
     if (character_size != sizeof(char) && character_size != sizeof(wchar_t))
         return 0;
 
-    if (!tls_index_initialized)
+    if (!fls_index_initialized)
     {
-        tls_index = TlsAlloc();
-        if (tls_index == TLS_OUT_OF_INDEXES)
+        fls_index = FlsAlloc(fls_callback);
+        if (fls_index == FLS_OUT_OF_INDEXES)
             return 0;
-        tls_index_initialized = TRUE;
+        fls_index_initialized = TRUE;
     }
 
     logger = (logger_instance*)HeapAlloc(GetProcessHeap(), 0, sizeof(logger_instance));
@@ -71,39 +77,39 @@ void log_destroy_logger(logger_instance* const logger)
 static int log_init_message_impl2(logger_instance* const logger, LOG_LEVEL const level, void const* const file,
                                   unsigned char const file_char_size, long const line)
 {
-    thread_local_data* tls_data;
+    fiber_local_data* fls_data;
 
-    if (!tls_index_initialized)
+    if (!fls_index_initialized)
         return 0;
 
-    tls_data = (thread_local_data*)TlsGetValue(tls_index);
-    if (tls_data == NULL || tls_data == 0)
+    fls_data = (fiber_local_data*)FlsGetValue(fls_index);
+    if (fls_data == NULL || fls_data == 0)
     {
         if (GetLastError() != ERROR_SUCCESS)
             return 0;
-        tls_data = (thread_local_data*)HeapAlloc(GetProcessHeap(), 0, sizeof(thread_local_data));
-        if (tls_data == NULL)
+        fls_data = (fiber_local_data*)HeapAlloc(GetProcessHeap(), 0, sizeof(fiber_local_data));
+        if (fls_data == NULL)
             return 0;
-        tls_data->converted_file = 0;
-        if (!TlsSetValue(tls_index, tls_data))
+        fls_data->converted_file = 0;
+        if (!FlsSetValue(fls_index, fls_data))
             return 0;
     }
 
-    if (tls_data->converted_file)
-        HeapFree(GetProcessHeap(), 0, (LPVOID)tls_data->converted_file);
+    if (fls_data->converted_file)
+        HeapFree(GetProcessHeap(), 0, (LPVOID)fls_data->converted_file);
 
     if (LOG_IS_ENABLED(logger, level))
     {
-        tls_data->logger = logger;
-        tls_data->level = level;
-        tls_data->file = file;
-        tls_data->file_char_size = file_char_size;
-        tls_data->converted_file = 0;
-        tls_data->line = line;
-        tls_data->do_log = TRUE;
+        fls_data->logger = logger;
+        fls_data->level = level;
+        fls_data->file = file;
+        fls_data->file_char_size = file_char_size;
+        fls_data->converted_file = 0;
+        fls_data->line = line;
+        fls_data->do_log = TRUE;
     }
     else
-        tls_data->do_log = FALSE;
+        fls_data->do_log = FALSE;
 
     return 1;
 }
@@ -128,20 +134,20 @@ int log_init_message(logger_instance* const logger, LOG_LEVEL const level, char 
 
 int log_print_message(char const* const format, ...)
 {
-    thread_local_data* tls_data;
+    fiber_local_data* fls_data;
     va_list args;
     int message_len;
     char* message;
     int ret;
 
-    if (!tls_index_initialized)
+    if (!fls_index_initialized)
         return 0;
 
-    tls_data = (thread_local_data*)TlsGetValue(tls_index);
-    if (tls_data == NULL || tls_data == 0)
+    fls_data = (fiber_local_data*)FlsGetValue(fls_index);
+    if (fls_data == NULL || fls_data == 0)
         return 0;
 
-    if (!tls_data->do_log)
+    if (!fls_data->do_log)
         return 1;
 
     va_start(args, format);
@@ -171,9 +177,9 @@ int log_print_message(char const* const format, ...)
 
     ret = 0;
 
-    if (tls_data->logger->character_size == sizeof(char))
-        ret = tls_data->logger->log_message(tls_data->logger, tls_data->level, message);
-    else if (tls_data->logger->character_size == sizeof(wchar_t))
+    if (fls_data->logger->character_size == sizeof(char))
+        ret = fls_data->logger->log_message(fls_data->logger, fls_data->level, message);
+    else if (fls_data->logger->character_size == sizeof(wchar_t))
         do {
             int wide_len;
             LPWSTR wide_message;
@@ -194,7 +200,7 @@ int log_print_message(char const* const format, ...)
 
             wide_message[wide_len] = '\0';
 
-            ret = tls_data->logger->log_message(tls_data->logger, tls_data->level, wide_message);
+            ret = fls_data->logger->log_message(fls_data->logger, fls_data->level, wide_message);
 
             HeapFree(GetProcessHeap(), 0, wide_message);
         } while (0);
@@ -216,21 +222,21 @@ extern "C"
 #endif /* defined(__cplusplus) */
 int wlog_print_message(wchar_t const* const format, ...)
 {
-    thread_local_data* tls_data;
+    fiber_local_data* fls_data;
     size_t buffer_size;
     wchar_t* message;
     va_list args;
     int message_len;
     int ret;
 
-    if (!tls_index_initialized)
+    if (!fls_index_initialized)
         return 0;
 
-    tls_data = (thread_local_data*)TlsGetValue(tls_index);
-    if (tls_data == NULL || tls_data == 0)
+    fls_data = (fiber_local_data*)FlsGetValue(fls_index);
+    if (fls_data == NULL || fls_data == 0)
         return 0;
 
-    if (!tls_data->do_log)
+    if (!fls_data->do_log)
         return 1;
 
     buffer_size = 240;
@@ -254,9 +260,9 @@ int wlog_print_message(wchar_t const* const format, ...)
 
     ret = 0;
 
-    if (tls_data->logger->character_size == sizeof(wchar_t))
-        ret = tls_data->logger->log_message(tls_data->logger, tls_data->level, message);
-    else if (tls_data->logger->character_size == sizeof(char))
+    if (fls_data->logger->character_size == sizeof(wchar_t))
+        ret = fls_data->logger->log_message(fls_data->logger, fls_data->level, message);
+    else if (fls_data->logger->character_size == sizeof(char))
         do {
             int narrow_len;
             LPSTR narrow_message;
@@ -278,7 +284,7 @@ int wlog_print_message(wchar_t const* const format, ...)
 
             narrow_message[narrow_len] = '\0';
 
-            ret = tls_data->logger->log_message(tls_data->logger, tls_data->level, narrow_message);
+            ret = fls_data->logger->log_message(fls_data->logger, fls_data->level, narrow_message);
 
             HeapFree(GetProcessHeap(), 0, narrow_message);
         } while (0);
@@ -289,32 +295,32 @@ int wlog_print_message(wchar_t const* const format, ...)
 
 void log_get_file_and_line(void const** const file, long* const line)
 {
-    thread_local_data* tls_data;
+    fiber_local_data* fls_data;
 
     *file = L"";
     *line = -1;
 
-    if (!tls_index_initialized)
+    if (!fls_index_initialized)
         return;
 
-    tls_data = (thread_local_data*)TlsGetValue(tls_index);
-    if (tls_data == NULL || tls_data == 0)
+    fls_data = (fiber_local_data*)FlsGetValue(fls_index);
+    if (fls_data == NULL || fls_data == 0)
         return;
 
-    *line = tls_data->line;
+    *line = fls_data->line;
 
-    if (tls_data->file_char_size == tls_data->logger->character_size)
-        *file = tls_data->file;
-    else if (tls_data->converted_file)
-        *file = tls_data->converted_file;
-    else if (tls_data->file_char_size == sizeof(char))
+    if (fls_data->file_char_size == fls_data->logger->character_size)
+        *file = fls_data->file;
+    else if (fls_data->converted_file)
+        *file = fls_data->converted_file;
+    else if (fls_data->file_char_size == sizeof(char))
     {
         int wide_len;
         LPWSTR wide_file;
 
         *file = L"<error>";
 
-        wide_len = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)tls_data->file, -1, NULL, 0) - 1;
+        wide_len = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)fls_data->file, -1, NULL, 0) - 1;
         if (wide_len == 0)
             return;
 
@@ -322,7 +328,7 @@ void log_get_file_and_line(void const** const file, long* const line)
         if (wide_file == NULL)
             return;
 
-        if (MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)tls_data->file, -1, wide_file, wide_len) - 1 != wide_len)
+        if (MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)fls_data->file, -1, wide_file, wide_len) - 1 != wide_len)
         {
             HeapFree(GetProcessHeap(), 0, wide_file);
             return;
@@ -330,17 +336,17 @@ void log_get_file_and_line(void const** const file, long* const line)
 
         wide_file[wide_len] = '\0';
 
-        tls_data->converted_file = wide_file;
+        fls_data->converted_file = wide_file;
         *file = wide_file;
     }
-    else if (tls_data->file_char_size == sizeof(wchar_t))
+    else if (fls_data->file_char_size == sizeof(wchar_t))
     {
         int narrow_len;
         LPSTR narrow_file;
 
         *file = "<error>";
 
-        narrow_len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)tls_data->file, -1, NULL, 0, NULL, NULL) - 1;
+        narrow_len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)fls_data->file, -1, NULL, 0, NULL, NULL) - 1;
         if (narrow_len == 0)
             return;
 
@@ -348,7 +354,7 @@ void log_get_file_and_line(void const** const file, long* const line)
         if (narrow_file == NULL)
             return;
 
-        if (WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)tls_data->file, -1, narrow_file, narrow_len, NULL, NULL) - 1
+        if (WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)fls_data->file, -1, narrow_file, narrow_len, NULL, NULL) - 1
             != narrow_len)
         {
             HeapFree(GetProcessHeap(), 0, narrow_file);
@@ -357,7 +363,7 @@ void log_get_file_and_line(void const** const file, long* const line)
 
         narrow_file[narrow_len] = '\0';
 
-        tls_data->converted_file = narrow_file;
+        fls_data->converted_file = narrow_file;
         *file = narrow_file;
     }
 }
