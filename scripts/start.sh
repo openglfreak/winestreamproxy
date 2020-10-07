@@ -49,7 +49,7 @@ load_settings_file() {
 }
 check_settings_found() {
     if [ x"${settings_found}" != x'true' ] && \
-       [ x"${WINESTREAMPROXY_PIPE_NAME:+set}${WINESTREAMPROXY_SOCKET_PATH:+set}" != x'setset' ]; then
+       [ x"${WINESTREAMPROXY_PIPE_NAME:+set}${WINESTREAMPROXY_SOCKET_PATH:+set}${WINESTREAMPROXY_SYSTEM:+set}" != x'setsetset' ]; then
         printf 'error: configuration file not found\n' >&2
         exit 1
     fi
@@ -65,6 +65,7 @@ load_settings_file ./winestreamproxy.conf
 check_settings_found
 pipe_name="${WINESTREAMPROXY_PIPE_NAME:-${pipe_name}}"
 socket_path="${WINESTREAMPROXY_SOCKET_PATH:-${socket_path}}"
+system="${WINESTREAMPROXY_SYSTEM:-${system}}"
 
 # Check whether the socket exists.
 if ! [ -e "${socket_path}" ]; then
@@ -159,4 +160,5 @@ fi
 : "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
 
 # Start winestreamproxy in the background and wait until the proxy loop is running.
-eval "setsid -w ${wine} \"\${base_dir}/\${exe_name}\" --pipe \"\${pipe_name}\" --socket \"\${socket_path}\" \${1+\"\$@\"}"
+eval "setsid -w ${wine} \"\${base_dir}/\${exe_name}\" --pipe \"\${pipe_name}\" --socket \"\${socket_path}\" \
+                                                      ${system+ --system=\"\${system\}\"} \${1+\"\$@\"}"
