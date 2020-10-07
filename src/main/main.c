@@ -61,6 +61,7 @@ typedef struct main_option_values {
     int show_version;
     unsigned int verbose;
     int foreground;
+    int system;
     int svchost;
     TCHAR const* pipe_name;
     TCHAR const* socket_path;
@@ -76,6 +77,7 @@ argparser_option_list_entry main_arg_option_list[] = {
     { 0,        _T("version"),      ARGPARSER_OPTION_TYPE_PRESENCE,     0, offsetof(main_option_values, show_version) },
     { _T("v"),  _T("verbose"),      ARGPARSER_OPTION_TYPE_ACCUMULATOR,  0, offsetof(main_option_values, verbose) },
     { _T("f"),  _T("foreground"),   ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, foreground) },
+    { _T("y"),  _T("system"),       ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, system) },
     { 0,        _T("svchost"),      ARGPARSER_OPTION_TYPE_BOOLEAN,      0, offsetof(main_option_values, svchost) },
     { _T("p"),  _T("pipe"),         ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, pipe_name) },
     { _T("s"),  _T("socket"),       ARGPARSER_OPTION_TYPE_STRING,       0, offsetof(main_option_values, socket_path) },
@@ -170,6 +172,7 @@ static void print_help(TCHAR const* const arg0)
         _T("    --version          Show the version number and exit\n")
         _T("-v, --verbose          Be more verbose (can be specified multiple times)\n")
         _T("-f, --foreground       Do not daemonize\n")
+        _T("-y, --system           Exit when all other processes have exited\n")
         _T("-p, --pipe <name>      Explicitly specify the pipe name\n")
         _T("-s, --socket <path>    Explicitly specify the socket path\n"),
         exe
@@ -263,7 +266,9 @@ int __cdecl _tmain(int const argc, TCHAR* argv[])
     log_destroy_logger(early_logger);
 
     if (optvals.svchost)
-        return service_main(optvals.verbose, optvals.foreground, optvals.pipe_name, optvals.socket_path);
+        return service_main(optvals.verbose, optvals.foreground, optvals.system, optvals.pipe_name,
+                            optvals.socket_path);
     else
-        return standalone_main(optvals.verbose, optvals.foreground, optvals.pipe_name, optvals.socket_path);
+        return standalone_main(optvals.verbose, optvals.foreground, optvals.system, optvals.pipe_name,
+                               optvals.socket_path);
 }
