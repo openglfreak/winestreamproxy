@@ -153,6 +153,8 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         log_level = (LOG_LEVEL)0;
     log_set_min_level(logger, log_level);
 
+    LOG_TRACE(logger, (_T("Created main logger")));
+
     service_status_handle = RegisterServiceCtrlHandler(service_name, service_ctrl_handler);
     if (service_status_handle == 0)
     {
