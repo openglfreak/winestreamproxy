@@ -156,4 +156,5 @@ fi
 : "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
 
 # Start winestreamproxy in the background and wait until the proxy loop is running.
-eval "setsid -w ${wine} \"\${base_dir}/\${exe_name}\" --pipe \"\${pipe_name}\" --socket \"\${socket_path}\" \${1+\"\$@\"}"
+eval "setsid -w ${wine} \"\${base_dir}/\${exe_name}\" --pipe \"\${pipe_name}\" --socket \"\${socket_path}\" \
+                                                      ${system+ --system=\"\${system\}\"} \${1+\"\$@\"}"
