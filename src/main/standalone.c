@@ -69,6 +69,98 @@ void state_change_callback(logger_instance* const logger, proxy_data* const prox
         double_spawn_exit_parent(logger);
 }
 
+typedef struct wait_shutdown_thread_params {
+    HANDLE exit_event;
+    HANDLE shutdown_event;
+} wait_shutdown_thread_params;
+
+DWORD WINAPI wait_shutdown_event(LPVOID const lpParameter)
+{
+    wait_shutdown_thread_params params;
+    HANDLE wait_handles[2];
+    DWORD wait_result;
+    DWORD ret;
+
+    params = *(wait_shutdown_thread_params const*)lpParameter;
+    HeapFree(GetProcessHeap(), 0, lpParameter);
+
+    wait_handles[0] = params.exit_event;
+    wait_handles[1] = params.shutdown_event;
+
+    do {
+        wait_result = \
+            WaitForMultipleObjects(sizeof(wait_handles) / sizeof(wait_handles[0]), wait_handles, FALSE, INFINITE);
+    } while (wait_result == WAIT_TIMEOUT);
+
+    switch (wait_result)
+    {
+        case WAIT_OBJECT_0:
+        case WAIT_OBJECT_0 + 1:
+            ret = 0;
+            break;
+        default:
+            ret = 1;
+    }
+
+    SetEvent(params.exit_event);
+    return ret;
+}
+
+static BOOL make_process_system(logger_instance* const logger, HANDLE const exit_event)
+{
+    HMODULE ntdll_handle;
+    HANDLE CDECL (*p__wine_make_process_system)(void);
+    HANDLE shutdown_event;
+    wait_shutdown_thread_params* params;
+    HANDLE wait_shutdown_thread;
+
+    LOG_TRACE(logger, (_T("Marking process as system process")));
+
+    ntdll_handle = GetModuleHandle(_T("ntdll.dll"));
+    if (ntdll_handle == NULL)
+    {
+        LOG_ERROR(logger, (_T("Could not get handle to ntdll")));
+        return TRUE;
+    }
+
+    p__wine_make_process_system = \
+        (HANDLE CDECL (*)(void))(ULONG_PTR)GetProcAddress(ntdll_handle, "__wine_make_process_system");
+    if (p__wine_make_process_system == NULL)
+    {
+        LOG_ERROR(logger, (_T("Could not get pointer to __wine_make_process_system function")));
+        return TRUE;
+    }
+
+    params = (wait_shutdown_thread_params*)HeapAlloc(GetProcessHeap(), 0, sizeof(wait_shutdown_thread_params));
+    if (!params)
+    {
+        LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)sizeof(wait_shutdown_thread_params)));
+        return FALSE;
+    }
+
+    shutdown_event = p__wine_make_process_system();
+    if (!shutdown_event)
+    {
+        LOG_ERROR(logger, (_T("Error in __wine_make_process_system")));
+        HeapFree(GetProcessHeap(), 0, params);
+        return TRUE;
+    }
+
+    params->exit_event = exit_event;
+    params->shutdown_event = shutdown_event;
+    wait_shutdown_thread = CreateThread(NULL, 0, wait_shutdown_event, (LPVOID)params, 0, NULL);
+    if (wait_shutdown_thread == NULL)
+    {
+        LOG_CRITICAL(logger, (_T("Could not create shutdown event wait thread")));
+        HeapFree(GetProcessHeap(), 0, params);
+        return FALSE;
+    }
+
+    LOG_TRACE(logger, (_T("Marked process as system process")));
+
+    return TRUE;
+}
+
 static HANDLE exit_event;
 
 WINAPI BOOL console_ctrl_handler(DWORD const ctrl_type)
@@ -93,8 +185,8 @@ void signal_handler(int const signal)
     SetEvent(exit_event);
 }
 
-static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_child, TCHAR const* const pipe_arg,
-                             TCHAR const* const socket_arg)
+static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_child, int const system,
+                             TCHAR const* const pipe_arg, TCHAR const* const socket_arg)
 {
     BOOL deallocate_pipe_path;
     proxy_parameters params;
@@ -151,6 +243,17 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
         return 1;
     }
 
+    if (system && !make_process_system(logger, params.exit_event))
+    {
+        proxy_destroy(proxy);
+        CloseHandle(params.exit_event);
+#ifdef _UNICODE
+        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+#endif
+        if (deallocate_pipe_path)
+            deallocate_path(params.paths.named_pipe_path);
+    }
+
     exit_event = params.exit_event;
     if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
         LOG_ERROR(logger, (_T("Could not set console ctrl handler: Error %d"), GetLastError()));
@@ -169,7 +272,8 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
     return 0;
 }
 
-static int standalone_main_2(unsigned int const verbose, TCHAR const* const pipe_arg, TCHAR const* const socket_arg)
+static int standalone_main_2(unsigned int const verbose, int const system, TCHAR const* const pipe_arg,
+                             TCHAR const* const socket_arg)
 {
     logger_instance* logger;
     LOG_LEVEL log_level;
@@ -194,7 +298,7 @@ static int standalone_main_2(unsigned int const verbose, TCHAR const* const pipe
         log_level = (LOG_LEVEL)0;
     log_set_min_level(logger, log_level);
 
-    ret = standalone_main_3(logger, TRUE, pipe_arg, socket_arg);
+    ret = standalone_main_3(logger, TRUE, system, pipe_arg, socket_arg);
 
     log_destroy_logger(logger);
     return ret;
@@ -204,6 +308,7 @@ int double_spawn_proc(void* aux_data, size_t aux_data_size)
 {
     char* p;
     unsigned int verbose;
+    int system;
     TCHAR const* pipe_name, * socket_path;
     size_t pipe_name_len, socket_path_len;
 
@@ -215,6 +320,10 @@ int double_spawn_proc(void* aux_data, size_t aux_data_size)
     verbose = *(unsigned int*)p;
     p += sizeof(unsigned int);
     aux_data_size -= sizeof(unsigned int);
+
+    system = *(int*)p;
+    p += sizeof(int);
+    aux_data_size -= sizeof(int);
 
     pipe_name = (TCHAR const*)p;
     pipe_name_len = _tcsnlen(pipe_name, aux_data_size);
@@ -229,10 +338,10 @@ int double_spawn_proc(void* aux_data, size_t aux_data_size)
     assert(aux_data_size == 0);
 
     HeapFree(GetProcessHeap(), 0, aux_data);
-    return standalone_main_2(verbose, pipe_name, socket_path);
+    return standalone_main_2(verbose, system, pipe_name, socket_path);
 }
 
-int standalone_main(unsigned int const verbose, int const foreground, TCHAR const* const pipe_arg,
+int standalone_main(unsigned int const verbose, int const foreground, int const system, TCHAR const* const pipe_arg,
                     TCHAR const* const socket_arg)
 {
     logger_instance* logger;
@@ -260,7 +369,7 @@ int standalone_main(unsigned int const verbose, int const foreground, TCHAR cons
     LOG_TRACE(logger, (_T("Created main logger")));
 
     if (foreground)
-        standalone_main_3(logger, FALSE, pipe_arg, socket_arg);
+        standalone_main_3(logger, FALSE, system, pipe_arg, socket_arg);
     else
     {
         size_t pipe_name_len, socket_path_len;
@@ -270,7 +379,8 @@ int standalone_main(unsigned int const verbose, int const foreground, TCHAR cons
         pipe_name_len = _tcslen(pipe_arg);
         socket_path_len = _tcslen(socket_arg);
 
-        data_size = sizeof(unsigned int) + (pipe_name_len + 1) * sizeof(TCHAR) + (socket_path_len + 1) * sizeof(TCHAR);
+        data_size = sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR)
+                    + (socket_path_len + 1) * sizeof(TCHAR);
         data = (char*)HeapAlloc(GetProcessHeap(), 0, data_size);
         if (!data)
         {
@@ -280,8 +390,9 @@ int standalone_main(unsigned int const verbose, int const foreground, TCHAR cons
         }
 
         *(unsigned int*)data = verbose;
-        RtlCopyMemory(data + sizeof(unsigned int), pipe_arg, (pipe_name_len + 1) * sizeof(TCHAR));
-        RtlCopyMemory(data + sizeof(unsigned int) + (pipe_name_len + 1) * sizeof(TCHAR), socket_arg,
+        *(int*)(data + sizeof(unsigned int)) = system;
+        RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int), pipe_arg, (pipe_name_len + 1) * sizeof(TCHAR));
+        RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR), socket_arg,
                       (socket_path_len + 1) * sizeof(TCHAR));
 
         double_spawn_fork(logger, double_spawn_proc, data, data_size);

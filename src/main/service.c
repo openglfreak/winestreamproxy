@@ -265,7 +265,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     log_destroy_logger(logger);
 }
 
-int service_main(unsigned int const _verbose, int const foreground, TCHAR const* const _pipe_arg,
+int service_main(unsigned int const _verbose, int const foreground, int const system, TCHAR const* const _pipe_arg,
                  TCHAR const* const _socket_arg)
 {
     if (foreground)
@@ -273,6 +273,9 @@ int service_main(unsigned int const _verbose, int const foreground, TCHAR const*
         log_message(0, LOG_LEVEL_CRITICAL, _T("Can not start service in foreground"));
         return FALSE;
     }
+
+    if (system)
+        log_message(0, LOG_LEVEL_INFO, _T("Services are always system processes, ignoring -y/--system parameter"));
 
     verbose = _verbose;
     pipe_arg = _pipe_arg;
