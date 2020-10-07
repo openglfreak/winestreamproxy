@@ -257,6 +257,8 @@ int standalone_main(unsigned int const verbose, int const foreground, TCHAR cons
         log_level = (LOG_LEVEL)0;
     log_set_min_level(logger, log_level);
 
+    LOG_TRACE(logger, (_T("Created main logger")));
+
     if (foreground)
         standalone_main_3(logger, FALSE, pipe_arg, socket_arg);
     else
