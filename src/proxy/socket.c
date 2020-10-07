@@ -120,6 +120,7 @@ void socket_cleanup(logger_instance* const logger, connection_data* const conn)
 
     if (InterlockedIncrement(&conn->do_cleanup) >= 2)
     {
+        LOG_DEBUG(logger, (_T("Pipe thread exited, closing socket")));
         pipe_close_server(logger, &conn->pipe);
         socket_disconnect(logger, &conn->socket);
         connection_list_deallocate_entry(logger, &conn->proxy->conn_list, conn);
