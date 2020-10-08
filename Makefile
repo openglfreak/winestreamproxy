@@ -50,12 +50,12 @@ _LDFLAGS = -mconsole $(LDFLAGS)
 _RELEASE_LDFLAGS = $(_LDFLAGS) $(RELEASE_LDFLAGS)
 _DEBUG_LDFLAGS = $(_LDFLAGS) $(DEBUG_LDFLAGS)
 
-sources = src/logger/logger.c src/main/argparser.c src/main/double_spawn.c src/main/main.c src/main/service.c \
-          src/main/standalone.c src/main/wide_to_narrow.c src/proxy/connection.c src/proxy/connection_list.c \
-          src/proxy/misc.c src/proxy/name_to_path.c src/proxy/pipe.c src/proxy/proxy.c src/proxy/socket.c \
-          src/proxy/thread.c
+sources = src/logger/logger.c src/main/argparser.c src/main/double_spawn.c src/main/main.c src/main/misc.c \
+          src/main/service.c src/main/standalone.c src/main/wide_to_narrow.c src/proxy/connection.c \
+          src/proxy/connection_list.c src/proxy/misc.c src/proxy/name_to_path.c src/proxy/pipe.c src/proxy/proxy.c \
+          src/proxy/socket.c src/proxy/thread.c
 headers = include/winestreamproxy/logger.h include/winestreamproxy/winestreamproxy.h src/main/argparser.h \
-          src/main/attributes.h src/main/double_spawn.h src/main/service.h src/main/standalone.h \
+          src/main/attributes.h src/main/double_spawn.h src/main/misc.h src/main/service.h src/main/standalone.h \
           src/main/wide_to_narrow.h src/proxy/connection.h src/proxy/connection_list.h \
           src/proxy/data/connection_data.h src/proxy/data/connection_list.h src/proxy/misc.h src/proxy/data/pipe_data.h \
           src/proxy/data/proxy_data.h src/proxy/data/socket_data.h src/proxy/data/thread_data.h src/proxy/pipe.h \
