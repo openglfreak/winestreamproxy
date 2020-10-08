@@ -9,6 +9,7 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #include "double_spawn.h"
+#include "misc.h"
 #include "standalone.h"
 #ifdef _UNICODE
 #include "wide_to_narrow.h"
@@ -242,6 +243,8 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
             deallocate_path(params.paths.named_pipe_path);
         return 1;
     }
+
+    lower_process_priority(logger);
 
     if (system && !make_process_system(logger, params.exit_event))
     {
