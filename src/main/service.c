@@ -8,6 +8,7 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
+#include "misc.h"
 #include "service.h"
 #ifdef _UNICODE
 #include "wide_to_narrow.h"
@@ -244,6 +245,8 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         log_destroy_logger(logger);
         return;
     }
+
+    lower_process_priority(logger);
 
     proxy_enter_loop(proxy);
 
