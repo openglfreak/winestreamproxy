@@ -9,6 +9,7 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #include "double_spawn.h"
+#include "notify.h"
 #include "misc.h"
 #include "standalone.h"
 #include <winestreamproxy/logger.h>
@@ -65,6 +66,20 @@ void state_change_callback(logger_instance* const logger, proxy_data* const prox
 
     if (new_state == PROXY_STATE_RUNNING)
         double_spawn_exit_parent(logger);
+}
+
+void client_accept_callback(logger_instance* const logger, proxy_data* const proxy, unsigned long const client_pid)
+{
+    static BOOL first_client = FALSE;
+
+    (void)proxy;
+    (void)client_pid;
+
+    if (!first_client)
+        return;
+    first_client = TRUE;
+
+    socket_notify(logger, 1);
 }
 
 typedef struct wait_shutdown_thread_params {
@@ -229,9 +244,14 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
     }
 
     params.state_change_callback = is_ds_child ? state_change_callback : 0;
+    if (init_socket_notification(logger))
+        params.client_accept_callback = client_accept_callback;
+    else
+        params.client_accept_callback = 0;
 
     if (!proxy_create(logger, params, &proxy))
     {
+        fini_socket_notification(logger);
         CloseHandle(params.exit_event);
 #ifdef _UNICODE
         HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
@@ -246,6 +266,7 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
     if (system && !make_process_system(logger, params.exit_event))
     {
         proxy_destroy(proxy);
+        fini_socket_notification(logger);
         CloseHandle(params.exit_event);
 #ifdef _UNICODE
         HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
@@ -262,6 +283,7 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
     proxy_enter_loop(proxy);
 
     proxy_destroy(proxy);
+    fini_socket_notification(logger);
     CloseHandle(params.exit_event);
 #ifdef _UNICODE
     HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);

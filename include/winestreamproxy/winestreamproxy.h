@@ -43,11 +43,13 @@ typedef struct proxy_data proxy_data;
 
 typedef void (*proxy_state_change_callback)(logger_instance* logger, proxy_data* proxy, PROXY_STATE prev_state,
                                             PROXY_STATE new_state);
+typedef void (*proxy_client_accept_callback)(logger_instance* logger, proxy_data* proxy, unsigned long client_pid);
 
 typedef struct proxy_parameters {
-    proxy_paths                 paths;
-    HANDLE                      exit_event; /* Must be manual-reset. */
-    proxy_state_change_callback state_change_callback;
+    proxy_paths                     paths;
+    HANDLE                          exit_event; /* Must be manual-reset. */
+    proxy_state_change_callback     state_change_callback;
+    proxy_client_accept_callback    client_accept_callback;
 } proxy_parameters;
 
 extern BOOL proxy_create(logger_instance* logger, proxy_parameters parameters, proxy_data** out_proxy);

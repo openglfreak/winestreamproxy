@@ -211,6 +211,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     }
 
     params.state_change_callback = 0;
+    params.client_accept_callback = 0;
 
     if (!proxy_create(logger, params, &proxy))
     {

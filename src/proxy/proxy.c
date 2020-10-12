@@ -136,11 +136,24 @@ void proxy_enter_loop(proxy_data* const proxy)
 
         if (prev_conn)
         {
+            ULONG client_pid;
+
+            if (!GetNamedPipeClientProcessId(prev_conn, &client_pid))
+            {
+                if (is_async) CancelIoEx(conn->pipe.handle, &proxy->accept_overlapped);
+                pipe_close_server(proxy->logger, &conn->pipe);
+                connection_list_deallocate_entry(proxy->logger, &proxy->conn_list, conn);
+                stop = TRUE;
+            }
+
             if (stop || !handle_new_connection(proxy->logger, prev_conn))
             {
                 connection_close(prev_conn);
                 break;
             }
+
+            if (proxy->parameters.client_accept_callback)
+                proxy->parameters.client_accept_callback(proxy->logger, proxy, client_pid);
         }
 
         if (stop)
