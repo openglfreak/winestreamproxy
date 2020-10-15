@@ -10,9 +10,6 @@
 
 #include "misc.h"
 #include "service.h"
-#ifdef _UNICODE
-#include "wide_to_narrow.h"
-#endif
 #include <winestreamproxy/logger.h>
 #include <winestreamproxy/winestreamproxy.h>
 
