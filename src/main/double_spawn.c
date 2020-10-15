@@ -10,6 +10,7 @@
 
 #include "attributes.h"
 #include "double_spawn.h"
+#include "misc.h"
 #include <winestreamproxy/logger.h>
 
 #include <errno.h>
@@ -34,46 +35,6 @@ static inline unsigned char parse_hex_digit(TCHAR const chr) ATTR_NOTHROW_CXX
            : chr >= _T('A') && chr <= _T('F') ? chr - _T('A') + 10
            : chr >= _T('a') && chr <= _T('f') ? chr - _T('a') + 10
            : 0xFF;
-}
-
-static BOOL get_envvar(TCHAR const* const name, TCHAR** const out_content, size_t* const out_length)
-{
-    TCHAR* content;
-    size_t capacity;
-    DWORD length;
-
-    capacity = 32;
-    while (TRUE)
-    {
-        content = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, capacity * sizeof(TCHAR));
-        if (content == NULL)
-            return FALSE;
-
-        length = GetEnvironmentVariable(name, content, capacity);
-        if (length < capacity)
-            break;
-
-        HeapFree(GetProcessHeap(), 0, content);
-        capacity *= 2;
-    }
-
-    if (length <= 0)
-    {
-        DWORD err;
-
-        err = GetLastError();
-        HeapFree(GetProcessHeap(), 0, content);
-        if (err == ERROR_ENVVAR_NOT_FOUND)
-        {
-            *out_content = 0;
-            return TRUE;
-        }
-        return FALSE;
-    }
-
-    *out_content = content;
-    *out_length = length;
-    return TRUE;
 }
 
 static BOOL decode_envvar(TCHAR const* envvar_content, BYTE* decoded_content, size_t decoded_content_size)
