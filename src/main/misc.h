@@ -14,11 +14,20 @@
 
 #include <winestreamproxy/logger.h>
 
+#ifdef _UNICODE
+#include <windef.h>
+#include <winnt.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* defined(__cplusplus) */
 
 extern void lower_process_priority(logger_instance* logger);
+
+#ifdef _UNICODE
+extern LPSTR wide_to_narrow(logger_instance* logger, LPCWCH wide_path);
+#endif
 
 #ifdef __cplusplus
 }

@@ -11,9 +11,6 @@
 #include "double_spawn.h"
 #include "misc.h"
 #include "standalone.h"
-#ifdef _UNICODE
-#include "wide_to_narrow.h"
-#endif
 #include <winestreamproxy/logger.h>
 #include <winestreamproxy/winestreamproxy.h>
 
