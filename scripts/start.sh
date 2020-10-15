@@ -75,7 +75,7 @@ is_in_path() {
     command -v -- "$1" >/dev/null 2>&1 && return || :
     hash -- "$1" >/dev/null 2>&1 && return || :
     # Non-POSIX.
-    # shellcheck disable=SC2039
+    # shellcheck disable=SC2039,SC3045
     type -p -- "$1" >/dev/null 2>&1 && return || :
     # shellcheck disable=SC2230
     which -- "$1" >/dev/null 2>&1 && return || :
