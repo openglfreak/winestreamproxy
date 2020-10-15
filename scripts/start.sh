@@ -153,6 +153,62 @@ if [ x"${wine#*/}" != x"${wine}" ] && [ -x "${wine}" ] || \
     wine='"${_wine}"'
 fi
 
+# Generates a pseudo-random 32-bit hex string.
+genrandom() {
+    # shellcheck disable=SC3028
+    if [ x"${RANDOM}" != x"${RANDOM}" ]; then
+        # Native shell support for $RANDOM is the best and fastest.
+        printf '%04x' $((((RANDOM&0x3FF)<<22)|((RANDOM&0x7FF)<<11)|(RANDOM&0x7FF)))
+    elif [ -e /dev/urandom ]; then
+        # /dev/urandom is not specified by POSIX, but it's still better than
+        # awk srand() + rand().
+        od -N 4 -t x1 -- /dev/urandom | sed -n '1s/^[^[:space:]][^[:space:]]*[[:space:]][[:space:]]*//;1s/[[:space:]]//gp'
+    else
+        # Need to sleep to make sure srand() picks a unique seed.
+        sleep 1
+        awk 'BEGIN { srand(); printf("%04x\n", rand() * 0x100000000); }'
+    fi
+}
+
+# Creates a temporary fifo.
+mktempfifo() (
+    n=20  # Try at most 20 times.
+    while [ 0 -lt "$n" ]; do
+        path="${TMPDIR:-/tmp}/tmp$(genrandom).fifo" || exit
+        if mkfifo -m 600 -- "${path}" 2>/dev/null; then
+            break
+        fi
+        n="$((n - 1))"
+    done
+    if [ -z "${path}" ]; then
+        printf 'error: Could not create a temporary fifo' >&2
+        return 1
+    else
+        printf '%s\n' "${path}"
+    fi
+)
+
+# Starts a dummy process to keep wine running if winestreamproxy is started
+# in system mode.
+start_dummy_process() {
+    tmpfifo="$(mktempfifo)" || exit
+    eval "cat < \"\${tmpfifo}\" | setsid -w ${wine} cmd /C 'set /P x=' &"
+}
+
+# Stops the dummy process started by start_dummy_process.
+# To be used by the wrapper script.
+stop_dummy_process() {
+    if [ -n "${tmpfifo}" ] && [ -e "${tmpfifo}" ]; then
+        echo > "${tmpfifo}"
+        rm -f "${tmpfifo}"
+        tmpfifo=''
+    fi
+}
+
+if [ x"${__start_dummy_process:-false}" = x'true' ]; then
+    start_dummy_process
+fi
+
 : "${pipe_name}" "${socket_path}"  # Make shellcheck happy.
 
 # Start winestreamproxy in the background and wait until the proxy loop is running.
