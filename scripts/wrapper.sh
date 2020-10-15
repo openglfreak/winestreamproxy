@@ -39,9 +39,14 @@ else
     printf 'error: %s not found\n' "${start_script}${sh1}" >&2
 fi
 
+# Tell the launch script to start a dummy Wine process before starting
+# the real winestreamproxy process.
+__start_dummy_process=true
 # Run winestreamproxy launch script.
 # shellcheck source=start.sh
 run_start_script() { . "${start_script}"; }
 run_start_script </dev/null || exit
+# Stop the dummy process after a timeout of 3 seconds.
+{ sleep 3; stop_dummy_process; } &
 # Run the supplied command.
 exec ${1+"$@"}
