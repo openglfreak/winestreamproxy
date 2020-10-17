@@ -48,7 +48,8 @@ load_settings_file() {
     fi
 }
 check_settings_found() {
-    if [ x"${settings_found}" != x'true' ]; then
+    if [ x"${settings_found}" != x'true' ] && \
+       [ x"${WINESTREAMPROXY_PIPE_NAME:+set}${WINESTREAMPROXY_SOCKET_PATH:+set}" != x'setset' ]; then
         printf 'error: configuration file not found\n' >&2
         exit 1
     fi
@@ -62,6 +63,8 @@ load_settings_file \
     "${XDG_CONFIG_HOME:-${HOME}/.config}/winestreamproxy/settings.conf"
 load_settings_file ./winestreamproxy.conf
 check_settings_found
+pipe_name="${WINESTREAMPROXY_PIPE_NAME:-${pipe_name}}"
+socket_path="${WINESTREAMPROXY_SOCKET_PATH:-${socket_path}}"
 
 # Check whether the socket exists.
 if ! [ -e "${socket_path}" ]; then
