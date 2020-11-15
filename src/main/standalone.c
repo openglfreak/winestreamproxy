@@ -24,6 +24,8 @@
 #include <wincon.h>
 #include <winnt.h>
 
+#include "printf.h" /* Must be last. */
+
 static TCHAR const* const log_level_prefixes[] = {
     _T("TRACE   "),
     _T("DEBUG   "),

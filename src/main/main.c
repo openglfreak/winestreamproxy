@@ -23,6 +23,8 @@
 #include <winbase.h>
 #include <winnt.h>
 
+#include "printf.h" /* Must be last. */
+
 static TCHAR const* const early_log_level_prefixes[] = {
     _T("Trace"),
     _T("Debug"),
