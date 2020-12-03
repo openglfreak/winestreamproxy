@@ -25,8 +25,8 @@ RM = rm -f --
 RMDIR = rmdir --
 TAR = tar -czf
 AWK = awk
-REPLACE = $(AWK) 'BEGIN { FS = ARGV[1]; delete ARGV[1]; OFS = ARGV[2]; delete ARGV[2]; } { $$1 = $$1; print; }'
-CHMODX = chmod a+x
+REPLACE = $(AWK) -- 'BEGIN { FS = ARGV[1]; delete ARGV[1]; OFS = ARGV[2]; delete ARGV[2]; } { $$1 = $$1; print; }'
+CHMODX = chmod -- a+x
 
 _include_stdarg = -include stdarg.h  # Work around Wine headers bug in 32-bit mode.
 
