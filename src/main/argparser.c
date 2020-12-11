@@ -152,9 +152,8 @@ static ARGPARSER_PARSE_RETURN parse_option_value(int const argc, TCHAR const* ar
     return ret;
 }
 
-static argparser_option_list_entry const* find_long_option(
-    argparser_option_list_entry const* const option_list,
-    TCHAR const* const arg, TCHAR const** const name_end_ptr)
+static argparser_option_list_entry const* find_long_option(argparser_option_list_entry const* const option_list,
+                                                           TCHAR const* const arg, TCHAR const** const name_end_ptr)
 {
     argparser_option_list_entry const* option;
     argparser_option_list_entry const* longest_matching_option = 0;
@@ -226,9 +225,8 @@ static ARGPARSER_PARSE_RETURN parse_long_parameter(logger_instance* const logger
     return ret;
 }
 
-static argparser_option_list_entry const* find_short_option(
-    argparser_option_list_entry const* const option_list,
-    TCHAR const* const str, TCHAR const** const name_end_ptr)
+static argparser_option_list_entry const* find_short_option(argparser_option_list_entry const* const option_list,
+                                                            TCHAR const* const str, TCHAR const** const name_end_ptr)
 {
     argparser_option_list_entry const* option;
     argparser_option_list_entry const* longest_matching_option = 0;
@@ -328,16 +326,52 @@ static ARGPARSER_PARSE_RETURN parse_short_parameter_group(logger_instance* const
 static ARGPARSER_PARSE_RETURN append_positional(TCHAR const*** const positionals, size_t* const positionals_count,
                                                 TCHAR const* const arg)
 {
+    size_t prev_count;
     ARGPARSER_PARSE_RETURN ret;
 
-    if (!resize_array((void**)positionals, sizeof(TCHAR const*), positionals_count, *positionals_count + 1))
+    prev_count = *positionals_count;
+    if (!resize_array((void**)positionals, sizeof(TCHAR const*), positionals_count, prev_count + 1))
     {
         *positionals = 0;
         ret.code = ARGPARSER_PARSE_RETURN_OUT_OF_MEMORY;
-        return ret;
     }
-    (*positionals)[*positionals_count - 1] = arg;
+    else
+    {
+        (*positionals)[prev_count] = arg;
+        ret.code = ARGPARSER_PARSE_RETURN_SUCCESS;
+    }
 
+    return ret;
+}
+
+static ARGPARSER_PARSE_RETURN parse_parameter(logger_instance* const logger, argparser_data const* const data,
+                                              int const argc, TCHAR const* argv[], int* const arg_index,
+                                              TCHAR const*** const positionals, size_t* const positionals_count,
+                                              BOOL* const exit_loop)
+{
+    ARGPARSER_PARSE_RETURN ret;
+
+    if (argv[*arg_index][0] != _T('-') || argv[*arg_index][1] == _T('\0'))
+    {
+        LOG_DEBUG(logger, (_T("Appending parameter %i as positional parameter"), *arg_index));
+        return append_positional(positionals, positionals_count, argv[*arg_index]);
+    }
+
+    if (argv[*arg_index][1] != _T('-'))
+    {
+        LOG_DEBUG(logger, (_T("Found short parameter(s) at argument %i"), *arg_index));
+        return parse_short_parameter_group(logger, data, argc, argv, arg_index);
+    }
+
+    if (argv[*arg_index][2] != _T('\0'))
+    {
+        LOG_DEBUG(logger, (_T("Found long parameter at argument %i"), *arg_index));
+        return parse_long_parameter(logger, data, argc, argv, arg_index);
+    }
+
+    LOG_DEBUG(logger, (_T("Found option list delimiter at argument %i"), *arg_index));
+    ++*arg_index;
+    *exit_loop = TRUE;
     ret.code = ARGPARSER_PARSE_RETURN_SUCCESS;
     return ret;
 }
@@ -345,17 +379,21 @@ static ARGPARSER_PARSE_RETURN append_positional(TCHAR const*** const positionals
 static ARGPARSER_PARSE_RETURN append_positional_all(TCHAR const*** const positionals, size_t* const positionals_count,
                                                     TCHAR const* args[], size_t const count)
 {
+    size_t prev_count;
     ARGPARSER_PARSE_RETURN ret;
 
-    if (!resize_array((void**)positionals, sizeof(TCHAR const*), positionals_count, *positionals_count + count))
+    prev_count = *positionals_count;
+    if (!resize_array((void**)positionals, sizeof(TCHAR const*), positionals_count, prev_count + count))
     {
         *positionals = 0;
         ret.code = ARGPARSER_PARSE_RETURN_OUT_OF_MEMORY;
-        return ret;
     }
-    RtlCopyMemory(&(*positionals)[*positionals_count - count], args, sizeof(TCHAR const*) * count);
+    else
+    {
+        RtlCopyMemory(*positionals + prev_count, args, sizeof(TCHAR const*) * count);
+        ret.code = ARGPARSER_PARSE_RETURN_SUCCESS;
+    }
 
-    ret.code = ARGPARSER_PARSE_RETURN_SUCCESS;
     return ret;
 }
 
@@ -363,44 +401,17 @@ ARGPARSER_PARSE_RETURN argparser_parse_parameters(logger_instance* const logger,
                                                   int const argc, TCHAR const* argv[])
 {
     int arg_index;
-    TCHAR const** positionals;
-    size_t positionals_count;
+    BOOL exit_loop = FALSE;
+    TCHAR const** positionals = 0;
+    size_t positionals_count = 0;
     ARGPARSER_PARSE_RETURN ret;
 
     LOG_TRACE(logger, (_T("Parsing parameters")));
 
-    positionals = 0;
-    positionals_count = 0;
-
-    for (arg_index = 1; arg_index < argc; ++arg_index)
+    for (arg_index = 1; arg_index < argc && !exit_loop; ++arg_index)
     {
-        if (argv[arg_index][0] == '-' && argv[arg_index][1] != '\0')
-        {
-            if (argv[arg_index][1] == '-')
-            {
-                if (argv[arg_index][2] == '\0')
-                {
-                    LOG_DEBUG(logger, (_T("Found option list delimiter at argument %i"), arg_index));
-                    ++arg_index; break;
-                }
-                else
-                {
-                    LOG_DEBUG(logger, (_T("Found long parameter at argument %i"), arg_index));
-                    ret = parse_long_parameter(logger, data, argc, argv, &arg_index);
-                }
-            }
-            else
-            {
-                LOG_DEBUG(logger, (_T("Found short parameter(s) at argument %i"), arg_index));
-                ret = parse_short_parameter_group(logger, data, argc, argv, &arg_index);
-            }
-        }
-        else
-        {
-            LOG_DEBUG(logger, (_T("Appending parameter %i as positional parameter"), arg_index));
-            ret = append_positional(&positionals, &positionals_count, argv[arg_index]);
-        }
-
+        LOG_TRACE(logger, (_T("Parsing parameter %d <%s>"), arg_index, argv[arg_index]));
+        ret = parse_parameter(logger, data, argc, argv, &arg_index, &positionals, &positionals_count, &exit_loop);
         if (ret.code != ARGPARSER_PARSE_RETURN_SUCCESS)
         {
             LOG_CRITICAL(logger, (_T("Error %d while parsing argument %i"), ret.code, arg_index));
@@ -412,15 +423,11 @@ ARGPARSER_PARSE_RETURN argparser_parse_parameters(logger_instance* const logger,
 
     if (arg_index < argc)
     {
-        LOG_DEBUG(logger, (_T("Appending %i remaining positional parameters"), argc - arg_index));
+        LOG_DEBUG(logger, (_T("Appending %d remaining positional parameters"), argc - arg_index));
         ret = append_positional_all(&positionals, &positionals_count, &argv[arg_index], argc - arg_index);
         if (ret.code != ARGPARSER_PARSE_RETURN_SUCCESS)
         {
-            LOG_CRITICAL(logger, (
-                _T("Error %d while appending remaining positional parameters"),
-                ret.code,
-                arg_index
-            ));
+            LOG_CRITICAL(logger, (_T("Error %d while appending remaining positional parameters"), ret.code, arg_index));
             if (positionals)
                 HeapFree(GetProcessHeap(), 0, positionals);
             return ret;
