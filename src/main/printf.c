@@ -8,6 +8,8 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
+#ifdef __WINE__
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <wchar.h>
@@ -181,3 +183,9 @@ int WINAPIV fake_fwprintf(FILE* stream, wchar_t const* format, ...)
     }
     return ret;
 }
+
+#else
+
+extern const char dummy_declaration;
+
+#endif /* defined(__WINE__) */

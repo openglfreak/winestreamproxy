@@ -12,6 +12,8 @@
 #ifndef __WINESTREAMPROXY_MAIN_PRINTF_H__
 #define __WINESTREAMPROXY_MAIN_PRINTF_H__
 
+#ifdef __WINE__
+
 #include <stdio.h>
 
 #include <windef.h>
@@ -47,5 +49,7 @@ extern int WINAPIV fake_fwprintf(FILE* stream, wchar_t const* format, ...);
 #ifdef __cplusplus
 }
 #endif /* defined(__cplusplus) */
+
+#endif /* defined(__WINE__) */
 
 #endif /* !defined(__WINESTREAMPROXY_MAIN_PRINTF_H__) */
