@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#ifndef __WINE__
+#include <fibersapi.h>
+#endif
 #include <windef.h>
 #include <winbase.h>
 #include <winnls.h>
