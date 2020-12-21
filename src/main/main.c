@@ -15,6 +15,7 @@
 #include <winestreamproxy/logger.h>
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,6 +25,10 @@
 #include <winnt.h>
 
 #include "printf.h" /* Must be last. */
+
+#ifndef offsetof
+#define offsetof(st, m) ((size_t)((char*)&((st*)0)->m - (char*)0))
+#endif
 
 static TCHAR const* const early_log_level_prefixes[] = {
     _T("Trace"),
