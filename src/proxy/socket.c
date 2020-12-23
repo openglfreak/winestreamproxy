@@ -14,17 +14,13 @@
 #include "pipe.h"
 #include "socket.h"
 #include "thread.h"
+#include "../proxy_unixlib/socket.h"
 #include <winestreamproxy/logger.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <stddef.h>
 
-#include <poll.h>
-#ifdef socket_use_eventfd
-#include <sys/eventfd.h>
-#endif
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <tchar.h>
 #include <unistd.h>
 #include <windef.h>
@@ -35,45 +31,39 @@
 BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket_path, socket_data* const _socket)
 {
     size_t socket_path_len;
+    int error;
 
     LOG_TRACE(logger, (_T("Preparing socket")));
 
     socket_path_len = strlen(unix_socket_path);
-    if (socket_path_len > sizeof(_socket->addr.sun_path) - 1)
+    if (socket_path_len > socket_get_max_path_length())
     {
         LOG_CRITICAL(logger, (_T("Socket path too long")));
         return FALSE;
     }
 
-    RtlZeroMemory(&_socket->addr, sizeof(_socket->addr));
-    _socket->addr.sun_family = AF_UNIX;
-    RtlCopyMemory(_socket->addr.sun_path, unix_socket_path, socket_path_len);
-
-#ifdef socket_use_eventfd
-    _socket->thread_exit_eventfd = eventfd(0, EFD_CLOEXEC);
-    if (_socket->thread_exit_eventfd == -1)
+    _socket->address = HeapAlloc(GetProcessHeap(), 0, socket_get_address_struct_size());
+    if (!_socket->address)
     {
-        LOG_CRITICAL(logger, (_T("Failed to create eventfd: Error %d"), errno));
+        LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)socket_get_address_struct_size()));
         return FALSE;
     }
-#else
-    if (pipe(_socket->thread_exit_pipe) == -1)
+    socket_init_address(_socket->address, unix_socket_path, socket_path_len);
+
+    error = socket_create_thread_exit_signal(&_socket->signal);
+    if (error)
     {
-        LOG_CRITICAL(logger, (_T("Failed to create pipe: Error %d"), errno));
+        LOG_CRITICAL(logger, (_T("Failed to create thread exit event: Error %d"), error));
+        HeapFree(GetProcessHeap(), 0, _socket->address);
         return FALSE;
     }
-#endif
 
-    _socket->fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (_socket->fd == -1)
+    error = socket_create(&_socket->fd);
+    if (error)
     {
-        LOG_CRITICAL(logger, (_T("Failed to create socket: Error %d"), errno));
-#ifdef socket_use_eventfd
-        close(_socket->thread_exit_eventfd);
-#else
-        close(_socket->thread_exit_pipe[0]);
-        close(_socket->thread_exit_pipe[1]);
-#endif
+        LOG_CRITICAL(logger, (_T("Failed to create socket: Error %d"), error));
+        socket_close_thread_exit_signal(_socket->signal);
+        HeapFree(GetProcessHeap(), 0, _socket->address);
         return FALSE;
     }
 
@@ -84,11 +74,14 @@ BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket
 
 BOOL socket_connect(logger_instance* const logger, socket_data* const socket)
 {
+    int error;
+
     LOG_TRACE(logger, (_T("Connecting socket")));
 
-    if (connect(socket->fd, (struct sockaddr*)&socket->addr, sizeof(socket->addr)) != 0)
+    error = socket_connect_unix(socket->fd, socket->address);
+    if (error)
     {
-        LOG_ERROR(logger, (_T("Failed to connect to socket: Error %d"), errno));
+        LOG_ERROR(logger, (_T("Failed to connect to socket: Error %d"), error));
         return FALSE;
     }
 
@@ -101,13 +94,9 @@ BOOL socket_disconnect(logger_instance* const logger, socket_data* const socket)
 {
     LOG_TRACE(logger, (_T("Closing socket")));
 
-    close(socket->fd);
-#ifdef socket_use_eventfd
-    close(socket->thread_exit_eventfd);
-#else
-    close(socket->thread_exit_pipe[0]);
-    close(socket->thread_exit_pipe[1]);
-#endif
+    socket_close(socket->fd);
+    socket_close_thread_exit_signal(socket->signal);
+    HeapFree(GetProcessHeap(), 0, socket->address);
 
     LOG_TRACE(logger, (_T("Closed socket")));
 
@@ -134,30 +123,13 @@ void socket_cleanup(logger_instance* const logger, connection_data* const conn)
     LOG_TRACE(logger, (_T("Cleaned up after socket thread")));
 }
 
-static BOOL signal_fd(logger_instance* const logger, int const fd)
-{
-    static char one[8] = { 0, 0, 0, 0, 0, 0, 0, 1 };
-
-    if (write(fd, one, 8) != 8)
-    {
-        LOG_ERROR(logger, (_T("Could not send exit signal to socket thread")));
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
 BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket)
 {
     BOOL ret = TRUE;
 
     LOG_TRACE(logger, (_T("Stopping socket thread")));
 
-#ifdef socket_use_eventfd
-    if (!signal_fd(logger, socket->thread_exit_eventfd))
-#else
-    if (!signal_fd(logger, socket->thread_exit_pipe[1]))
-#endif
+    if (socket_set_thread_exit_signal(socket->signal))
         ret = FALSE;
     else if (!thread_wait(logger, &socket_thread_description, &socket->thread))
         ret = FALSE;
@@ -180,8 +152,8 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
                                            unsigned char** const inout_buffer, size_t* const inout_buffer_size,
                                            size_t* const out_message_length)
 {
-    struct pollfd fds[2];
-    int nfds;
+    poll_status pstatus;
+    int error;
 
     LOG_TRACE(logger, (_T("Waiting for message from socket")));
 
@@ -199,74 +171,55 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
         }
     }
 
-    fds[0].fd = socket->fd;
-    fds[0].events = POLLIN | POLLPRI | POLLHUP;
-    fds[0].revents = 0;
-#ifdef socket_use_eventfd
-    fds[1].fd = socket->thread_exit_eventfd;
-#else
-    fds[1].fd = socket->thread_exit_pipe[0];
-#endif
-    fds[1].events = POLLIN | POLLPRI | POLLHUP;
-    fds[1].revents = 0;
-    while ((nfds = poll(fds, sizeof(fds) / sizeof(fds[0]), -1)) == 0 || nfds == EAGAIN || nfds == EINTR);
-    if (nfds == -1)
+    error = socket_poll(socket->fd, socket->signal, &pstatus);
+    if (error)
     {
-        LOG_ERROR(logger, (_T("Call to poll() failed: Error %d"), errno));
+        LOG_ERROR(logger, (_T("Call to poll() failed: Error %d"), error));
         return RECV_MSG_RET_FAILURE;
     }
 
-    if (fds[1].revents)
+    switch (pstatus)
     {
-        LOG_DEBUG(logger, (_T("Socket thread: Received exit event")));
-        return RECV_MSG_RET_EXIT;
-    }
-
-    if (fds[0].revents & POLLHUP)
-    {
-        LOG_INFO(logger, (_T("Server closed connection")));
-        return RECV_MSG_RET_SHUTDOWN;
-    }
-
-    if (!(fds[0].revents & (POLLIN | POLLPRI)))
-    {
-        LOG_ERROR(logger, (_T("Unknown flags returned from poll: %d"), (int)fds[0].revents));
-        return RECV_MSG_RET_FAILURE;
+        case POLL_STATUS_SUCCESS:
+            break;
+        case POLL_STATUS_EXIT_SIGNAL:
+            LOG_DEBUG(logger, (_T("Socket thread: Received exit event")));
+            return RECV_MSG_RET_EXIT;
+        case POLL_STATUS_CLOSED_CONNECTION:
+            LOG_INFO(logger, (_T("Server closed connection")));
+            return RECV_MSG_RET_SHUTDOWN;
+        case POLL_STATUS_INVALID_MESSAGE_FLAGS:
+            LOG_ERROR(logger, (_T("Unhandled flags returned from poll")));
+            return RECV_MSG_RET_FAILURE;
     }
 
     while (TRUE)
     {
-        ssize_t recv_ret;
+        size_t msg_len;
+        recv_status rstatus;
         size_t new_buffer_size;
         unsigned char* new_buffer;
 
         LOG_TRACE(logger, (_T("Reading message from socket")));
 
-        recv_ret = recv(socket->fd, *inout_buffer, *inout_buffer_size, MSG_PEEK);
-        if (recv_ret == -1)
+        error = socket_recv(socket->fd, *inout_buffer, *inout_buffer_size, &rstatus, &msg_len);
+        if (error)
         {
-            LOG_ERROR(logger, (_T("Reading from socket failed: Error %d"), errno));
+            LOG_ERROR(logger, (_T("Reading from socket failed: Error %d"), error));
             return RECV_MSG_RET_FAILURE;
         }
 
-        if ((size_t)recv_ret < *inout_buffer_size)
+        if (rstatus != RECV_STATUS_INSUFFICIENT_BUFFER)
         {
-            ssize_t recv_ret2;
-
-            recv_ret2 = recv(socket->fd, *inout_buffer, (size_t)recv_ret, 0);
-            if (recv_ret2 == recv_ret)
-            {
-                *out_message_length = (size_t)recv_ret;
-                break;
-            }
-            else if (recv_ret2 == -1)
-                LOG_ERROR(logger, (_T("Reading from socket failed: Error %d"), errno));
-            else
+            if (rstatus == RECV_STATUS_DISCARDED_DATA)
                 LOG_ERROR(logger, (_T("Discarded socket data")));
-            return RECV_MSG_RET_FAILURE;
+            else
+                assert(rstatus == RECV_STATUS_SUCCESS);
+            *out_message_length = msg_len;
+            break;
         }
 
-        new_buffer_size = recv_ret * 2;
+        new_buffer_size = msg_len * 3 / 2 + 1; /* 1.5 times the message length, to be safe. */
         new_buffer = (unsigned char*)HeapReAlloc(GetProcessHeap(), 0, *inout_buffer,
                                                  sizeof(unsigned char) * new_buffer_size);
         if (!new_buffer)
@@ -333,7 +286,8 @@ BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
 BOOL socket_send_message(logger_instance* const logger, socket_data* const socket, unsigned char const* const message,
                          size_t const message_length)
 {
-    ssize_t bytes_written;
+    size_t bytes_written;
+    int error;
 
     LOG_TRACE(logger, (_T("Sending message to socket")));
 
@@ -343,16 +297,16 @@ BOOL socket_send_message(logger_instance* const logger, socket_data* const socke
         return FALSE;
     }
 
-    bytes_written = write(socket->fd, message, message_length);
-    if (bytes_written == -1)
+    error = socket_write(socket->fd, message, message_length, &bytes_written);
+    if (error)
     {
-        LOG_ERROR(logger, (_T("Error %d while writing to socket"), errno));
+        LOG_ERROR(logger, (_T("Error %d while writing to socket"), error));
         return FALSE;
     }
-    else if ((size_t)bytes_written != message_length)
+    else if (bytes_written != message_length)
     {
         LOG_ERROR(logger, (
-            (size_t)bytes_written < message_length
+            bytes_written < message_length
             ? _T("Partial write to socket: %lu < %lu")
             : _T("Invalid return value from write: %lu > %lu"),
             (unsigned long)bytes_written,

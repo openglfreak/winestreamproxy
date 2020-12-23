@@ -76,9 +76,9 @@ fi
 if ! [ x"${exe_name+set}" = x'set' ]; then
     case "${0##*/}" in
         start-debug|start-debug.sh|winestreamproxy-debug)
-            exe_name=winestreamproxy-debug.exe.so;;
+            exe_name=winestreamproxy-debug.exe;;
         *)
-            exe_name=winestreamproxy.exe.so;;
+            exe_name=winestreamproxy.exe;;
     esac
 fi
 

@@ -29,7 +29,7 @@ case "${0##*/}" in
         sh1=; sh2=.sh; start_script=start;;
 esac
 case "$start_script" in *-debug)
-    exe_name=winestreamproxy-debug.exe.so
+    exe_name=winestreamproxy-debug.exe
 esac
 if [ -e "${script_dir}/${start_script}${sh1}" ]; then
     start_script="${script_dir}/${start_script}${sh1}"
