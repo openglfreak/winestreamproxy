@@ -89,8 +89,8 @@ $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: 
         $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res $(spec_unixlib) $(sources_unixlib) $(headers_unixlib) \
         Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -nodefaultlibs -lkernel32 \
-	           $(OBJ)/version.res -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) $(sources_unixlib)
+	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) $(OBJ)/version.res \
+	           -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) $(sources_unixlib)
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy_unixlib.dll.so
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy_unixlib.dll.dbg.o $(OUT)/winestreamproxy_unixlib.dll.so
@@ -116,8 +116,8 @@ $(OUT)/.version-debug: $(OBJ)/.version
 $(OUT)/winestreamproxy_unixlib-debug.dll.so: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res \
                                              $(spec_unixlib) $(sources_unixlib) $(headers_unixlib) Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -nodefaultlibs -lkernel32 \
-	           $(OBJ)/version-debug.res -shared -o $(OUT)/winestreamproxy_unixlib-debug.dll.so $(spec_unixlib) \
+	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) $(OBJ)/version-debug.res \
+	           -shared -o $(OUT)/winestreamproxy_unixlib-debug.dll.so $(spec_unixlib) \
 	           $(sources_unixlib)
 
 $(OUT)/winestreamproxy-debug.exe: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res $(sources) $(headers) \
