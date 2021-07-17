@@ -24,8 +24,6 @@
 #include <winbase.h>
 #include <winnt.h>
 
-#include "printf.h" /* Must be last. */
-
 #ifndef offsetof
 #define offsetof(st, m) ((size_t)((char*)&((st*)0)->m - (char*)0))
 #endif

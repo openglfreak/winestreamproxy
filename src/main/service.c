@@ -21,8 +21,6 @@
 #include <winnt.h>
 #include <winsvc.h>
 
-#include "printf.h" /* Must be last. */
-
 unsigned int verbose;
 TCHAR const* pipe_arg;
 TCHAR const* socket_arg;
