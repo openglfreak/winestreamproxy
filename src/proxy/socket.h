@@ -22,6 +22,8 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
+extern BOOL socket_init_unixlib(void);
+
 extern BOOL socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
 extern BOOL socket_connect(logger_instance* logger, socket_data* socket);
 extern BOOL socket_disconnect(logger_instance* logger, socket_data* socket);

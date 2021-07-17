@@ -29,6 +29,12 @@ BOOL proxy_create(logger_instance* const logger, proxy_parameters const paramete
 
     LOG_TRACE(logger, (_T("Creating proxy object")));
 
+    if (!socket_init_unixlib())
+    {
+        LOG_CRITICAL(logger, (_T("Could not initialize unixlib")));
+        return FALSE;
+    }
+
     proxy = (proxy_data*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(proxy_data));
     if (!proxy)
     {
