@@ -17,12 +17,14 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <ntstatus.h>
 #include <signal.h>
 #include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
 #include <wincon.h>
 #include <winnt.h>
+#include <winternl.h>
 
 #include "printf.h" /* Must be last. */
 
@@ -106,42 +108,66 @@ DWORD WINAPI wait_shutdown_event(LPVOID const lpParameter)
     return ret;
 }
 
-static BOOL make_process_system(logger_instance* const logger, HANDLE const exit_event)
+static BOOL legacy_make_process_system(logger_instance* const logger, HANDLE* const shutdown_event)
 {
     HMODULE ntdll_handle;
     HANDLE CDECL (*p__wine_make_process_system)(void);
-    HANDLE shutdown_event;
-    wait_shutdown_thread_params* params;
-    HANDLE wait_shutdown_thread;
-
-    LOG_TRACE(logger, (_T("Marking process as system process")));
 
     ntdll_handle = GetModuleHandle(_T("ntdll.dll"));
     if (ntdll_handle == NULL)
     {
         LOG_ERROR(logger, (_T("Could not get handle to ntdll")));
-        return TRUE;
+        return FALSE;
     }
 
     p__wine_make_process_system = \
         (HANDLE CDECL (*)(void))(ULONG_PTR)GetProcAddress(ntdll_handle, "__wine_make_process_system");
     if (p__wine_make_process_system == NULL)
     {
-        LOG_ERROR(logger, (_T("Could not get pointer to __wine_make_process_system function")));
-        return TRUE;
+        LOG_TRACE(logger, (_T("Could not get pointer to __wine_make_process_system function")));
+        return FALSE;
     }
+
+    *shutdown_event = p__wine_make_process_system();
+    if (!*shutdown_event)
+    {
+        LOG_ERROR(logger, (_T("Error in __wine_make_process_system")));
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL new_make_process_system(logger_instance* const logger, HANDLE* const shutdown_event)
+{
+    NTSTATUS status = NtSetInformationProcess(GetCurrentProcess(), /*ProcessWineMakeProcessSystem*/ 1000, shutdown_event, sizeof(HANDLE));
+    if (NT_SUCCESS(status))
+        return TRUE;
+    if (status == STATUS_NOT_IMPLEMENTED)
+        LOG_TRACE(logger, (_T("ProcessWineMakeProcessSystem not implemented")));
+    else
+        LOG_ERROR(logger, (_T("Error in NtSetInformationProcess(..., ProcessWineMakeProcessSystem, ...)")));
+    return FALSE;
+}
+
+static BOOL make_process_system(logger_instance* const logger, HANDLE const exit_event)
+{
+    wait_shutdown_thread_params* params;
+    HANDLE wait_shutdown_thread;
+    HANDLE shutdown_event;
+
+    LOG_TRACE(logger, (_T("Marking process as system process")));
 
     params = (wait_shutdown_thread_params*)HeapAlloc(GetProcessHeap(), 0, sizeof(wait_shutdown_thread_params));
     if (!params)
     {
         LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)sizeof(wait_shutdown_thread_params)));
-        return FALSE;
+        return TRUE;
     }
 
-    shutdown_event = p__wine_make_process_system();
-    if (!shutdown_event)
+    if (!legacy_make_process_system(logger, &shutdown_event) && !new_make_process_system(logger, &shutdown_event))
     {
-        LOG_ERROR(logger, (_T("Error in __wine_make_process_system")));
+        LOG_TRACE(logger, (_T("Could not mark process as system process")));
         HeapFree(GetProcessHeap(), 0, params);
         return TRUE;
     }
@@ -153,10 +179,10 @@ static BOOL make_process_system(logger_instance* const logger, HANDLE const exit
     {
         LOG_CRITICAL(logger, (_T("Could not create shutdown event wait thread")));
         HeapFree(GetProcessHeap(), 0, params);
-        return FALSE;
+        return TRUE;
     }
 
-    LOG_TRACE(logger, (_T("Marked process as system process")));
+    LOG_INFO(logger, (_T("Marked process as system process")));
 
     return TRUE;
 }
