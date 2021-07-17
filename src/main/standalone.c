@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <ntdef.h>
 #include <ntstatus.h>
 #include <signal.h>
 #include <tchar.h>
@@ -25,6 +26,20 @@
 #include <wincon.h>
 #include <winnt.h>
 #include <winternl.h>
+
+#ifndef _tcsnlen
+#ifdef _UNICODE
+#define _tcsnlen wcsnlen
+#elif defined(_MBCS)
+#define _tcsnlen _mbsnblen
+#else
+#define _tcsnlen strnlen
+#endif
+#endif
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
+#endif
 
 static TCHAR const* const log_level_prefixes[] = {
     _T("TRACE   "),

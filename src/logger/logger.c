@@ -251,7 +251,7 @@ int wlog_print_message(wchar_t const* const format, ...)
             return 0;
 
         va_start(args, format);
-        message_len = vswprintf(message, buffer_size, format, args);
+        message_len = _vsnwprintf(message, buffer_size, format, args);
         va_end(args);
 
         if (message_len >= 0)
