@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Torge Matthies
+/* Copyright (C) 2020-2021 Torge Matthies
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -23,8 +23,6 @@
 #include <windef.h>
 #include <winbase.h>
 #include <winnt.h>
-
-#include "printf.h" /* Must be last. */
 
 #ifndef offsetof
 #define offsetof(st, m) ((size_t)((char*)&((st*)0)->m - (char*)0))

@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Torge Matthies
+/* Copyright (C) 2020-2021 Torge Matthies
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -20,8 +20,6 @@
 #include <winbase.h>
 #include <winnt.h>
 #include <winsvc.h>
-
-#include "printf.h" /* Must be last. */
 
 unsigned int verbose;
 TCHAR const* pipe_arg;
