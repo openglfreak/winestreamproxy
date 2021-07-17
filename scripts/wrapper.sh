@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2020 Torge Matthies
+# Copyright (C) 2020-2021 Torge Matthies
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -29,7 +29,7 @@ case "${0##*/}" in
         sh1=; sh2=.sh; start_script=start;;
 esac
 case "$start_script" in *-debug)
-    exe_name=winestreamproxy-debug.exe.so
+    exe_name=winestreamproxy-debug.exe
 esac
 if [ -e "${script_dir}/${start_script}${sh1}" ]; then
     start_script="${script_dir}/${start_script}${sh1}"

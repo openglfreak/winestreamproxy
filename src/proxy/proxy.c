@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Torge Matthies
+/* Copyright (C) 2020-2021 Torge Matthies
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -28,6 +28,12 @@ BOOL proxy_create(logger_instance* const logger, proxy_parameters const paramete
     proxy_data* proxy;
 
     LOG_TRACE(logger, (_T("Creating proxy object")));
+
+    if (!socket_init_unixlib())
+    {
+        LOG_CRITICAL(logger, (_T("Could not initialize unixlib")));
+        return FALSE;
+    }
 
     proxy = (proxy_data*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(proxy_data));
     if (!proxy)

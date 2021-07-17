@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Torge Matthies
+/* Copyright (C) 2020-2021 Torge Matthies
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -21,6 +21,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* defined(__cplusplus) */
+
+extern BOOL socket_init_unixlib(void);
 
 extern BOOL socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
 extern BOOL socket_connect(logger_instance* logger, socket_data* socket);

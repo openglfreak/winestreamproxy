@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Torge Matthies
+/* Copyright (C) 2020-2021 Torge Matthies
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -13,23 +13,19 @@
 #define __WINESTREAMPROXY_PROXY_DATA_SOCKET_DATA_H__
 
 #include "thread_data.h"
+#include "../../proxy_unixlib/socket.h"
 
 #include <windef.h>
 #include <winbase.h>
-#include <sys/un.h>
 
 #ifdef __linux__
 #define socket_use_eventfd
 #endif
 
 typedef struct socket_data {
-    struct sockaddr_un  addr;
+    void*               address;
     int                 fd;
-#ifdef socket_use_eventfd
-    int                 thread_exit_eventfd;
-#else
-    int                 thread_exit_pipe[2];
-#endif
+    thread_exit_event   event;
     thread_data         thread;
 } socket_data;
 
