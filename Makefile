@@ -12,7 +12,8 @@
 
 OUT = out
 OBJ = obj
-PREFIX = /usr/local
+DESTDIR = /usr/local
+PREFIX = $(DESTDIR)
 
 MKDIR = mkdir -p --
 WRC = wrc
@@ -123,63 +124,63 @@ $(OUT)/debug.tar.gz: $(OUT)/.version-debug $(OUT)/winestreamproxy-debug.exe.so $
 	                    start-debug.sh wrapper-debug.sh
 
 install: install-release
-install-release: $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so \
-                 $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o $(PREFIX)/lib/winestreamproxy/settings.conf \
-                 $(PREFIX)/bin/winestreamproxy $(PREFIX)/bin/winestreamproxy-wrapper
-install-debug: $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so $(PREFIX)/lib/winestreamproxy/settings.conf \
-               $(PREFIX)/bin/winestreamproxy-debug $(PREFIX)/bin/winestreamproxy-wrapper-debug
+install-release: $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.so \
+                 $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.dbg.o $(DESTDIR)/lib/winestreamproxy/settings.conf \
+                 $(DESTDIR)/bin/winestreamproxy $(DESTDIR)/bin/winestreamproxy-wrapper
+install-debug: $(DESTDIR)/lib/winestreamproxy/winestreamproxy-debug.exe.so $(DESTDIR)/lib/winestreamproxy/settings.conf \
+               $(DESTDIR)/bin/winestreamproxy-debug $(DESTDIR)/bin/winestreamproxy-wrapper-debug
 
-$(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o: \
+$(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.so $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.dbg.o: \
         $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o
-	$(MKDIR) $(PREFIX)/lib/winestreamproxy
-	$(CP) $(OUT)/winestreamproxy.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
-	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
-	$(CP) $(OUT)/winestreamproxy.exe.dbg.o $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
-	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+	$(MKDIR) $(DESTDIR)/lib/winestreamproxy
+	$(CP) $(OUT)/winestreamproxy.exe.so $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(TOUCH) $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(CP) $(OUT)/winestreamproxy.exe.dbg.o $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+	$(TOUCH) $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
 
-$(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so: $(OUT)/winestreamproxy-debug.exe.so
-	$(MKDIR) $(PREFIX)/lib/winestreamproxy
-	$(CP) $(OUT)/winestreamproxy-debug.exe.so $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
-	$(TOUCH) $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+$(DESTDIR)/lib/winestreamproxy/winestreamproxy-debug.exe.so: $(OUT)/winestreamproxy-debug.exe.so
+	$(MKDIR) $(DESTDIR)/lib/winestreamproxy
+	$(CP) $(OUT)/winestreamproxy-debug.exe.so $(DESTDIR)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+	$(TOUCH) $(DESTDIR)/lib/winestreamproxy/winestreamproxy-debug.exe.so
 
-$(PREFIX)/lib/winestreamproxy/settings.conf: $(OUT)/settings.conf
-	$(MKDIR) $(PREFIX)/lib/winestreamproxy
-	$(CP) $(OUT)/settings.conf $(PREFIX)/lib/winestreamproxy/settings.conf
-	$(TOUCH) $(PREFIX)/lib/winestreamproxy/settings.conf
+$(DESTDIR)/lib/winestreamproxy/settings.conf: $(OUT)/settings.conf
+	$(MKDIR) $(DESTDIR)/lib/winestreamproxy
+	$(CP) $(OUT)/settings.conf $(DESTDIR)/lib/winestreamproxy/settings.conf
+	$(TOUCH) $(DESTDIR)/lib/winestreamproxy/settings.conf
 
-$(PREFIX)/bin/winestreamproxy: $(OUT)/start.sh $(PREFIX)/lib/winestreamproxy/settings.conf
-	$(MKDIR) $(PREFIX)/bin
-	$(REPLACE) @prefix@ $(PREFIX) $(OUT)/start.sh | $(REPLACE) @prefix_defined@ true > $(PREFIX)/bin/winestreamproxy
-	$(CHMODX) $(PREFIX)/bin/winestreamproxy
-$(PREFIX)/bin/winestreamproxy-wrapper: $(OUT)/wrapper.sh $(PREFIX)/bin/winestreamproxy
-	$(MKDIR) $(PREFIX)/bin
-	$(CP) $(OUT)/wrapper.sh $(PREFIX)/bin/winestreamproxy-wrapper
-	$(TOUCH) $(PREFIX)/bin/winestreamproxy-wrapper
+$(DESTDIR)/bin/winestreamproxy: $(OUT)/start.sh $(DESTDIR)/lib/winestreamproxy/settings.conf
+	$(MKDIR) $(DESTDIR)/bin
+	$(REPLACE) @prefix@ $(PREFIX) $(OUT)/start.sh | $(REPLACE) @prefix_defined@ true > $(DESTDIR)/bin/winestreamproxy
+	$(CHMODX) $(DESTDIR)/bin/winestreamproxy
+$(DESTDIR)/bin/winestreamproxy-wrapper: $(OUT)/wrapper.sh $(DESTDIR)/bin/winestreamproxy
+	$(MKDIR) $(DESTDIR)/bin
+	$(CP) $(OUT)/wrapper.sh $(DESTDIR)/bin/winestreamproxy-wrapper
+	$(TOUCH) $(DESTDIR)/bin/winestreamproxy-wrapper
 
-$(PREFIX)/bin/winestreamproxy-debug: $(OUT)/start-debug.sh $(PREFIX)/lib/winestreamproxy/settings.conf
-	$(MKDIR) $(PREFIX)/bin
+$(DESTDIR)/bin/winestreamproxy-debug: $(OUT)/start-debug.sh $(DESTDIR)/lib/winestreamproxy/settings.conf
+	$(MKDIR) $(DESTDIR)/bin
 	$(REPLACE) @prefix@ $(PREFIX) $(OUT)/start-debug.sh | $(REPLACE) @prefix_defined@ true > \
-	    $(PREFIX)/bin/winestreamproxy-debug
-	$(CHMODX) $(PREFIX)/bin/winestreamproxy-debug
-$(PREFIX)/bin/winestreamproxy-wrapper-debug: $(OUT)/wrapper-debug.sh $(PREFIX)/bin/winestreamproxy-debug
-	$(MKDIR) $(PREFIX)/bin
-	$(CP) $(OUT)/wrapper-debug.sh $(PREFIX)/bin/winestreamproxy-wrapper-debug
-	$(TOUCH) $(PREFIX)/bin/winestreamproxy-wrapper-debug
+	    $(DESTDIR)/bin/winestreamproxy-debug
+	$(CHMODX) $(DESTDIR)/bin/winestreamproxy-debug
+$(DESTDIR)/bin/winestreamproxy-wrapper-debug: $(OUT)/wrapper-debug.sh $(DESTDIR)/bin/winestreamproxy-debug
+	$(MKDIR) $(DESTDIR)/bin
+	$(CP) $(OUT)/wrapper-debug.sh $(DESTDIR)/bin/winestreamproxy-wrapper-debug
+	$(TOUCH) $(DESTDIR)/bin/winestreamproxy-wrapper-debug
 
 uninstall: uninstall-release uninstall-debug
 uninstall-release:
-	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so
-	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
-	$(RM) $(PREFIX)/lib/winestreamproxy/settings.conf
-	-$(RMDIR) $(PREFIX)/lib/winestreamproxy 2>/dev/null || :
-	$(RM) $(PREFIX)/bin/winestreamproxy
-	$(RM) $(PREFIX)/bin/winestreamproxy-wrapper
+	$(RM) $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.so
+	$(RM) $(DESTDIR)/lib/winestreamproxy/winestreamproxy.exe.dbg.o
+	$(RM) $(DESTDIR)/lib/winestreamproxy/settings.conf
+	-$(RMDIR) $(DESTDIR)/lib/winestreamproxy 2>/dev/null || :
+	$(RM) $(DESTDIR)/bin/winestreamproxy
+	$(RM) $(DESTDIR)/bin/winestreamproxy-wrapper
 uninstall-debug:
-	$(RM) $(PREFIX)/lib/winestreamproxy/winestreamproxy-debug.exe.so
-	$(RM) $(PREFIX)/lib/winestreamproxy/settings.conf
-	-$(RMDIR) $(PREFIX)/lib/winestreamproxy 2>/dev/null || :
-	$(RM) $(PREFIX)/bin/winestreamproxy-debug
-	$(RM) $(PREFIX)/bin/winestreamproxy-wrapper-debug
+	$(RM) $(DESTDIR)/lib/winestreamproxy/winestreamproxy-debug.exe.so
+	$(RM) $(DESTDIR)/lib/winestreamproxy/settings.conf
+	-$(RMDIR) $(DESTDIR)/lib/winestreamproxy 2>/dev/null || :
+	$(RM) $(DESTDIR)/bin/winestreamproxy-debug
+	$(RM) $(DESTDIR)/bin/winestreamproxy-wrapper-debug
 
 clean:
 	$(RM) $(OBJ)/.version
