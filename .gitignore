@@ -22,9 +22,13 @@
 /out/winestreamproxy_unixlib-debug.dll.so
 /out/winestreamproxy-debug.exe
 /out/settings.conf
+/out/common.sh
 /out/start.sh
 /out/wrapper.sh
+/out/install.sh
+/out/common-debug.sh
 /out/start-debug.sh
 /out/wrapper-debug.sh
+/out/install-debug.sh
 /out/release.tar.gz
 /out/debug.tar.gz

@@ -69,34 +69,15 @@ fi
 # Load settings file.
 load_settings || exit
 
-# Check whether the socket exists.
-if ! [ -e "${socket_path}" ]; then
-    printf 'warning: %s does not exist\n' "${socket_path}" >&2
-fi
-
 # Find path to the Wine binary.
 find_wine || exit
 
-# Starts a dummy process to keep wine running if winestreamproxy is started
-# in system mode.
-start_dummy_process() {
-    tmpfifo="$(mktempfifo)" || exit
-    eval "cat < \"\${tmpfifo}\" | setsid -w ${wine} cmd /C 'set /P x=' &"
+# Escape a string for literal use in CreateProcess.
+escape_param() {
+    set -- "$(printf '%sx\n' "${1}" | sed 's/"/""/g'; echo x)"
+    printf '"%s"\n' "${1%x?x}"
 }
 
-# Stops the dummy process started by start_dummy_process.
-# To be used by the wrapper script.
-stop_dummy_process() {
-    if [ -n "${tmpfifo}" ] && [ -e "${tmpfifo}" ]; then
-        echo > "${tmpfifo}"
-        rm -f "${tmpfifo}"
-        tmpfifo=''
-    fi
-}
-
-if [ x"${__start_dummy_process:-false}" = x'true' ]; then
-    start_dummy_process
-fi
-
-# Start winestreamproxy in the background and wait until the proxy loop is running.
-run_wine "${exe_path}" --pipe "${pipe_name}" --socket "${socket_path}" ${system+--system="${system}"} ${1+"$@"}
+binpath="$(escape_param "${exe_path:?}") --pipe $(escape_param "${pipe_name}") --socket $(escape_param "${socket_path}") --svchost"
+run_wine 'C:\windows\system32\sc.exe' delete winestreamproxy ||:
+run_wine 'C:\windows\system32\sc.exe' create winestreamproxy start= auto binpath= "${binpath}"
