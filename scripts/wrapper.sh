@@ -13,24 +13,33 @@
 # https://stackoverflow.com/a/29835459
 : "${script_dir:="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"}"
 
-# Use start-debug if the script name is wrapper-debug.
-case "${0##*/}" in
-    winestreamproxy-wrapper-debug)
-        sh1=; sh2=.sh; start_script=winestreamproxy-debug;;
-    wrapper-debug.sh)
-        sh1=.sh; sh2=; start_script=start-debug;;
-    wrapper-debug)
-        sh1=; sh2=.sh; start_script=start-debug;;
-    winestreamproxy-wrapper)
-        sh1=; sh2=.sh; start_script=winestreamproxy;;
-    *.sh)
-        sh1=.sh; sh2=; start_script=start;;
-    *)
-        sh1=; sh2=.sh; start_script=start;;
-esac
-case "$start_script" in *-debug)
-    exe_name=winestreamproxy-debug.exe
-esac
+# shellcheck disable=SC2050
+if [ x'@debug@' = x'true' ]; then
+    debug='true'
+else
+    case "${0##*/}" in
+        *-debug.sh|*-debug) debug='true';;
+        *) debug='false';;
+    esac
+fi
+
+# shellcheck disable=SC2050
+if [ x'@installed@' = x'true' ]; then
+    sh1=''
+    sh2='.sh'
+    start_script="winestreamproxy"
+else
+    start_script="start"
+    case "${0##*/}" in
+        *.sh) sh1=.sh; sh2=;;
+        *) sh1=; sh2=.sh;;
+    esac
+fi
+
+if [ x"${debug}" = x'true' ]; then
+    start_script="${start_script}-debug"
+fi
+
 if [ -e "${script_dir}/${start_script}${sh1}" ]; then
     start_script="${script_dir}/${start_script}${sh1}"
 elif [ -e "${script_dir}/${start_script}${sh2}" ]; then
