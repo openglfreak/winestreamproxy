@@ -1,9 +1,9 @@
-# winestreamproxy
+# Winestreamproxy
 
 Forwards data between a Windows named pipe and a Unix domain socket. Primarily made for allowing games that run under
-Wine to connect to native Linux Discord and then show rich presence information in the user's status.
+Wine to connect to native Linux Discord and show rich presence information in the user's status.
 
-**"Top directory" in this file refers to the directory where the Makefile for winestreamproxy is located.**
+**"Top directory" in this file refers to the directory where the Makefile for Winestreamproxy is located.**
 
 ## Prerequisites
 
@@ -13,9 +13,9 @@ To run the program, you need a working Wine, libc, and a shell.
 
 ## Compiling
 
-To compile winestreamproxy using the default build directories, run
+To compile Winestreamproxy using the default build directories, run
 ```
-make
+sh ./build-64.sh
 ```
 in the top directory.
 
@@ -27,16 +27,15 @@ in the top directory.
 
 To compile a 32-bit version, do
 ```
-make CFLAGS='-m32'
+sh ./build-32.sh
 ```
-instead. If you have already compiled a 64-bit version, you need to clean the build directories first before making a
-32-bit build, or choose different build directories by specifying the `OBJ` and `OUT` variables.
+instead.
 
 ## System-wide installation
 
 **Compile the program before attempting to install it.**
 
-To install winestreamproxy into system directories, run
+To install Winestreamproxy into system directories, run
 ```sh
 make install
 ```
@@ -62,12 +61,12 @@ winestreamproxy --help
 ```
 in a terminal.
 
-If you want to run winestreamproxy and another program (e.g. a game) in the same command (e.g. for use as the command
+If you want to run Winestreamproxy and another program (e.g. a game) in the same command (e.g. for use as the command
 prefix in Lutris), use the included wrapper script. This script can be used by prepending
 ```sh
 winestreamproxy-wrapper
 ```
-to the command to be run. Note that it is currently not possible to pass command line parameters to winestreamproxy
+to the command to be run. Note that it is currently not possible to pass command line parameters to Winestreamproxy
 through the wrapper script - if you need to do this, you will have to write your own wrapper script that includes
 these parameters.
 
@@ -82,3 +81,10 @@ Configuration files can be put in any of the following locations:
 - winestreamproxy.conf in the working directory
 
 See the default settings.conf for possible configuration options.
+
+Once you have a working configuration, you can run
+```sh
+winestreamproxy-install
+```
+to install the Winestreamproxy service into a prefix. It will then be started every time the prefix is started.
+After changing any settings you need to install the service again, otherwise it will continue to use the old settings.
