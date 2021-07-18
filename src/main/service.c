@@ -98,6 +98,26 @@ static void service_set_status_stopped(logger_instance* const logger)
         LOG_ERROR(logger, (_T("Failed to set service status to stopped: Error %d"), GetLastError()));
 }
 
+static HANDLE exit_event;
+
+static void service_set_status_running(logger_instance* const logger, proxy_data* const proxy,
+                                       PROXY_STATE const prev_state, PROXY_STATE const new_state)
+{
+    (void)proxy;
+    (void)prev_state;
+    (void)new_state;
+
+    service_status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+    service_status.dwCurrentState = SERVICE_RUNNING;
+    service_status.dwWin32ExitCode = 0;
+    service_status.dwCheckPoint = 0;
+    if (SetServiceStatus(service_status_handle , &service_status) == 0)
+    {
+        LOG_CRITICAL(logger, (_T("Failed to set service status to running: Error %d"), GetLastError()));
+        SetEvent(exit_event);
+    }
+}
+
 void WINAPI service_ctrl_handler(DWORD control)
 {
     switch (control)
@@ -162,9 +182,10 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     }
 
     service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    service_status.dwCurrentState = SERVICE_START_PENDING;
+    /* Wine already continues with prefix boot when SERVICE_START_PENDING is reached, so we can't send that here. */
+    /*service_status.dwCurrentState = SERVICE_START_PENDING;
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
-        LOG_ERROR(logger, (_T("Failed to set service status to starting: Error %d"), GetLastError()));
+        LOG_ERROR(logger, (_T("Failed to set service status to starting: Error %d"), GetLastError()));*/
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
@@ -210,7 +231,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         return;
     }
 
-    params.state_change_callback = 0;
+    params.state_change_callback = service_set_status_running;
 
     if (!proxy_create(logger, params, &proxy))
     {
@@ -225,25 +246,9 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
         return;
     }
 
-    service_status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
-    service_status.dwCurrentState = SERVICE_RUNNING;
-    service_status.dwWin32ExitCode = 0;
-    service_status.dwCheckPoint = 0;
-    if (SetServiceStatus(service_status_handle , &service_status) == 0)
-    {
-        LOG_CRITICAL(logger, (_T("Failed to set service status to running: Error %d"), GetLastError()));
-        CloseHandle(params.exit_event);
-#ifdef _UNICODE
-        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
-#endif
-        if (deallocate_pipe_path)
-            deallocate_path(params.paths.named_pipe_path);
-        service_set_status_stopped(logger);
-        log_destroy_logger(logger);
-        return;
-    }
-
     lower_process_priority(logger);
+
+    exit_event = params.exit_event;
 
     proxy_enter_loop(proxy);
 
