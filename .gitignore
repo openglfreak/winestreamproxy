@@ -32,3 +32,5 @@
 /out/install-debug.sh
 /out/release.tar.gz
 /out/debug.tar.gz
+winestreamproxy-*.*.*-i386.tar.gz
+winestreamproxy-*.*.*-amd64.tar.gz
