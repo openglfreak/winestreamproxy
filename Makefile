@@ -113,7 +113,6 @@ $(OUT)/wrapper-debug.sh: scripts/wrapper.sh $(OUT)/start-debug.sh
 
 release-tarball: $(OUT)/release.tar.gz
 debug-tarball: $(OUT)/debug.tar.gz
-source-tarball: $(OUT)/source.tar.gz
 
 $(OUT)/release.tar.gz: $(OUT)/.version $(OUT)/winestreamproxy.exe.so $(OUT)/winestreamproxy.exe.dbg.o \
                        $(OUT)/settings.conf $(OUT)/start.sh $(OUT)/wrapper.sh Makefile
@@ -125,10 +124,6 @@ $(OUT)/debug.tar.gz: $(OUT)/.version-debug $(OUT)/winestreamproxy-debug.exe.so $
 	cd $(OUT) && \
 	$(TAR) debug.tar.gz .version-debug winestreamproxy-debug.exe.so settings.conf \
 	                    start-debug.sh wrapper-debug.sh
-$(OUT)/source.tar.gz: gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/version.res $(OBJ)/.version $(sources) \
-                      $(headers) Makefile
-	$(TAR) $(OUT)/source.tar.gz gen-version.sh $(OBJ)/version.h src/version.rc $(OBJ)/version.res $(OBJ)/.version \
-	                            $(sources) $(headers) Makefile
 
 install: install-release
 install-release: $(PREFIX)/lib/winestreamproxy/winestreamproxy.exe.so \
@@ -206,10 +201,9 @@ clean:
 	$(RM) $(OUT)/wrapper-debug.sh
 	$(RM) $(OUT)/release.tar.gz
 	$(RM) $(OUT)/debug.tar.gz
-	$(RM) $(OUT)/source.tar.gz
 	-$(RMDIR) $(OBJ) 2>/dev/null || :
 	-$(RMDIR) $(OUT) 2>/dev/null || :
 
-.PHONY: all release debug release-tarball debug-tarball source-tarball install install-release install-debug uninstall \
+.PHONY: all release debug release-tarball debug-tarball install install-release install-debug uninstall \
         uninstall-release uninstall-debug clean
 .ONESHELL:
