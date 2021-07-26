@@ -24,12 +24,16 @@
 /out/settings.conf
 /out/common.sh
 /out/start.sh
+/out/stop.sh
 /out/wrapper.sh
 /out/install.sh
+/out/uninstall.sh
 /out/common-debug.sh
 /out/start-debug.sh
+/out/stop-debug.sh
 /out/wrapper-debug.sh
 /out/install-debug.sh
+/out/uninstall-debug.sh
 /out/release.tar.gz
 /out/debug.tar.gz
 winestreamproxy-*.*.*-i386.tar.gz
