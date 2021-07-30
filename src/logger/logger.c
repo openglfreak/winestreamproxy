@@ -270,7 +270,7 @@ int wlog_print_message(wchar_t const* const format, ...)
             int narrow_len;
             LPSTR narrow_message;
 
-            narrow_len = WideCharToMultiByte(CP_UTF8, 0, message, message_len, NULL, 0, NULL, NULL);
+            narrow_len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)message, message_len, NULL, 0, NULL, NULL);
             if (narrow_len == 0)
                 break;
 
@@ -278,7 +278,7 @@ int wlog_print_message(wchar_t const* const format, ...)
             if (narrow_message == NULL)
                 break;
 
-            if (WideCharToMultiByte(CP_UTF8, 0, message, message_len, narrow_message, narrow_len, NULL, NULL)
+            if (WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)message, message_len, narrow_message, narrow_len, NULL, NULL)
                 != narrow_len)
             {
                 HeapFree(GetProcessHeap(), 0, narrow_message);
