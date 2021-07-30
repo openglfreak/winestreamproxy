@@ -82,26 +82,39 @@ $(OBJ)/version.res: $(OBJ)/version.h src/version.rc
 	$(MKDIR) $(OBJ)
 	cat $(OBJ)/version.h src/version.rc | $(WRC) $(_RELEASE_CPPFLAGS) $(_RELEASE_WRCFLAGS) -o $(OBJ)/version.res
 
+$(OBJ)/winestreamproxy_unixlib_unity_source.c: $(sources_unixlib) $(headers_unixlib) Makefile
+	$(MKDIR) $(OUT)
+	for file in $(sources_unixlib); do \
+		printf '#include "%s"\n' "$${PWD:-$$(pwd)}/$${file}"; \
+	done >$(OBJ)/winestreamproxy_unixlib_unity_source.c
+
+$(OBJ)/winestreamproxy_unity_source.c: $(sources) $(headers) Makefile
+	$(MKDIR) $(OUT)
+	for file in $(sources); do \
+		printf '#include "%s"\n' "$${PWD:-$$(pwd)}/$${file}"; \
+	done >$(OBJ)/winestreamproxy_unity_source.c
+
 $(OUT)/.version: $(OBJ)/.version
 	$(MKDIR) $(OUT)
 	$(CP) $(OBJ)/.version $(OUT)/.version
 	$(TOUCH) $(OUT)/.version
 
 $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: \
-        $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res $(spec_unixlib) $(sources_unixlib) $(headers_unixlib) \
-        Makefile
+        $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res $(spec_unixlib) \
+        $(OBJ)/winestreamproxy_unixlib_unity_source.c Makefile
 	$(MKDIR) $(OUT)
 	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) $(OBJ)/version.res \
-	           -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) $(sources_unixlib)
+	           -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) \
+	           $(OBJ)/winestreamproxy_unixlib_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy_unixlib.dll.so
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy_unixlib.dll.dbg.o $(OUT)/winestreamproxy_unixlib.dll.so
 
 $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o: $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res \
-                                                             $(sources) $(headers) Makefile
+                                                             $(OBJ)/winestreamproxy_unity_source.c Makefile
 	$(MKDIR) $(OUT)
 	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -mno-cygwin \
-	           -b $(CROSSTARGET) $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe $(sources)
+	           -b $(CROSSTARGET) $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe $(OBJ)/winestreamproxy_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy.exe.dbg.o $(OUT)/winestreamproxy.exe
@@ -328,6 +341,8 @@ clean:
 	$(RM) $(OBJ)/.version
 	$(RM) $(OBJ)/version.h
 	$(RM) $(OBJ)/version.res
+	$(RM) $(OBJ)/winestreamproxy_unixlib_unity_source.c
+	$(RM) $(OBJ)/winestreamproxy_unity_source.c
 	$(RM) $(OUT)/.version
 	$(RM) $(OUT)/winestreamproxy_unixlib.dll.so
 	$(RM) $(OUT)/winestreamproxy_unixlib.dll.dbg.o

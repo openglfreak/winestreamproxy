@@ -34,7 +34,7 @@ SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE service_status_handle;
 HANDLE service_exit_event;
 
-/*static TCHAR const* const log_level_prefixes[] = {
+/*static TCHAR const* const svc_log_level_prefixes[] = {
     _T("TRACE"),
     _T("DEBUG"),
     _T("INFO"),
@@ -52,7 +52,7 @@ static WORD const log_level_types[] = {
     EVENTLOG_ERROR_TYPE
 };*/
 
-static TCHAR const* const log_level_prefixes[] = {
+static TCHAR const* const svc_log_level_prefixes[] = {
     _T("TRACE   "),
     _T("DEBUG   "),
     _T("INFO    "),
@@ -64,7 +64,7 @@ static TCHAR const* const log_level_prefixes[] = {
 #define LOG_MESSAGE_LINE1_FMT _T("%s[%08x]: %s\n")
 #define LOG_MESSAGE_LINE2_FMT _T("                    At %s:%li\n")
 
-static int log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
+static int svc_log_message(logger_instance* const logger, LOG_LEVEL const level, void const* const message)
 {
     if (level < LOG_LEVEL_TRACE || level > LOG_LEVEL_CRITICAL)
         return 0;
@@ -79,10 +79,10 @@ static int log_message(logger_instance* const logger, LOG_LEVEL const level, voi
 
         log_get_file_and_line((void const**)&file, &line);
         _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT LOG_MESSAGE_LINE2_FMT,
-                  log_level_prefixes[level], (unsigned int)GetCurrentThreadId(), (TCHAR const*)message, file, line);
+                  svc_log_level_prefixes[level], (unsigned int)GetCurrentThreadId(), (TCHAR const*)message, file, line);
     }
     else
-        _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT, log_level_prefixes[level],
+        _ftprintf(level >= LOG_LEVEL_ERROR ? stderr : stdout, LOG_MESSAGE_LINE1_FMT, svc_log_level_prefixes[level],
                   (unsigned int)GetCurrentThreadId(), (TCHAR const*)message);
 
     return 1;
@@ -152,9 +152,9 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
     if (service_event_source == NULL)
         return;*/
 
-    if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
+    if (!log_create_logger(svc_log_message, (unsigned char)sizeof(TCHAR), &logger))
     {
-        log_message(0, LOG_LEVEL_CRITICAL, _T("Couldn't create logger"));
+        svc_log_message(0, LOG_LEVEL_CRITICAL, _T("Couldn't create logger"));
         return;
     }
 
@@ -275,12 +275,12 @@ int service_main(unsigned int const _verbose, int const foreground, int const sy
 {
     if (foreground)
     {
-        log_message(0, LOG_LEVEL_CRITICAL, _T("Can not start service in foreground"));
+        svc_log_message(0, LOG_LEVEL_CRITICAL, _T("Can not start service in foreground"));
         return FALSE;
     }
 
     if (system)
-        log_message(0, LOG_LEVEL_INFO, _T("Services are always system processes, ignoring -y/--system parameter"));
+        svc_log_message(0, LOG_LEVEL_INFO, _T("Services are always system processes, ignoring -y/--system parameter"));
 
     verbose = _verbose;
     pipe_arg = _pipe_arg;

@@ -12,6 +12,8 @@
 /obj/.version
 /obj/version.h
 /obj/version.res
+/obj/winestreamproxy_unixlib_unity_source.c
+/obj/winestreamproxy_unity_source.c
 /out/.version
 /out/winestreamproxy_unixlib.dll.so
 /out/winestreamproxy_unixlib.dll.dbg.o

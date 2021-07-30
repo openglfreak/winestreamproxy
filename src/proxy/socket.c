@@ -179,14 +179,14 @@ BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket
 
 #define STARTING_BUFFER_SIZE 1024
 
-typedef enum RECV_MSG_RET {
-    RECV_MSG_RET_SUCCESS,
-    RECV_MSG_RET_FAILURE,
-    RECV_MSG_RET_SHUTDOWN,
-    RECV_MSG_RET_EXIT
-} RECV_MSG_RET;
+typedef enum SOCKET_RECV_MSG_RET {
+    SOCKET_RECV_MSG_RET_SUCCESS,
+    SOCKET_RECV_MSG_RET_FAILURE,
+    SOCKET_RECV_MSG_RET_SHUTDOWN,
+    SOCKET_RECV_MSG_RET_EXIT
+} SOCKET_RECV_MSG_RET;
 
-static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket_data* const socket,
+static SOCKET_RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket_data* const socket,
                                            unsigned char** const inout_buffer, size_t* const inout_buffer_size,
                                            size_t* const out_message_length)
 {
@@ -205,7 +205,7 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
                 _T("Failed to allocate %lu bytes"),
                 (unsigned long)(sizeof(unsigned char) * STARTING_BUFFER_SIZE)
             ));
-            return RECV_MSG_RET_FAILURE;
+            return SOCKET_RECV_MSG_RET_FAILURE;
         }
     }
 
@@ -213,7 +213,7 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
     if (error)
     {
         LOG_ERROR(logger, (_T("Call to poll() failed: Error %d"), error));
-        return RECV_MSG_RET_FAILURE;
+        return SOCKET_RECV_MSG_RET_FAILURE;
     }
 
     switch (pstatus)
@@ -222,13 +222,13 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
             break;
         case POLL_STATUS_EXIT_SIGNALED:
             LOG_DEBUG(logger, (_T("Socket thread: Received exit event")));
-            return RECV_MSG_RET_EXIT;
+            return SOCKET_RECV_MSG_RET_EXIT;
         case POLL_STATUS_CLOSED_CONNECTION:
             LOG_INFO(logger, (_T("Server closed connection")));
-            return RECV_MSG_RET_SHUTDOWN;
+            return SOCKET_RECV_MSG_RET_SHUTDOWN;
         case POLL_STATUS_INVALID_MESSAGE_FLAGS:
             LOG_ERROR(logger, (_T("Unhandled flags returned from poll")));
-            return RECV_MSG_RET_FAILURE;
+            return SOCKET_RECV_MSG_RET_FAILURE;
     }
 
     while (TRUE)
@@ -244,7 +244,7 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
         if (error)
         {
             LOG_ERROR(logger, (_T("Reading from socket failed: Error %d"), error));
-            return RECV_MSG_RET_FAILURE;
+            return SOCKET_RECV_MSG_RET_FAILURE;
         }
 
         if (rstatus != RECV_STATUS_INSUFFICIENT_BUFFER)
@@ -267,7 +267,7 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
                 (unsigned long)*inout_buffer_size,
                 (unsigned long)(sizeof(unsigned char) * new_buffer_size)
             ));
-            return RECV_MSG_RET_FAILURE;
+            return SOCKET_RECV_MSG_RET_FAILURE;
         }
         *inout_buffer_size = new_buffer_size;
         *inout_buffer = new_buffer;
@@ -275,7 +275,7 @@ static RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket
 
     LOG_TRACE(logger, (_T("Read message from socket")));
 
-    return RECV_MSG_RET_SUCCESS;
+    return SOCKET_RECV_MSG_RET_SUCCESS;
 }
 
 BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
@@ -291,12 +291,12 @@ BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
     while (TRUE)
     {
         size_t message_length;
-        RECV_MSG_RET recv_ret;
+        SOCKET_RECV_MSG_RET recv_ret;
 
         recv_ret = socket_receive_message(logger, &conn->socket, &buffer, &buffer_size, &message_length);
-        if (recv_ret != RECV_MSG_RET_SUCCESS)
+        if (recv_ret != SOCKET_RECV_MSG_RET_SUCCESS)
         {
-            ret = recv_ret != RECV_MSG_RET_FAILURE;
+            ret = recv_ret != SOCKET_RECV_MSG_RET_FAILURE;
             break;
         }
 

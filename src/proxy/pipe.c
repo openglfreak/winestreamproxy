@@ -186,14 +186,14 @@ BOOL pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
     return ret;
 }
 
-typedef enum RECV_MSG_RET {
-    RECV_MSG_RET_SUCCESS,
-    RECV_MSG_RET_FAILURE,
-    RECV_MSG_RET_SHUTDOWN,
-    RECV_MSG_RET_EXIT
-} RECV_MSG_RET;
+typedef enum PIPE_RECV_MSG_RET {
+    PIPE_RECV_MSG_RET_SUCCESS,
+    PIPE_RECV_MSG_RET_FAILURE,
+    PIPE_RECV_MSG_RET_SHUTDOWN,
+    PIPE_RECV_MSG_RET_EXIT
+} PIPE_RECV_MSG_RET;
 
-static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_data* const pipe,
+static PIPE_RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_data* const pipe,
                                          unsigned char** const inout_buffer, size_t* const inout_buffer_size,
                                          size_t* const out_message_length)
 {
@@ -213,7 +213,7 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
                 _T("Failed to allocate %lu bytes"),
                 (unsigned long)(sizeof(unsigned char) * STARTING_BUFFER_SIZE)
             ));
-            return RECV_MSG_RET_FAILURE;
+            return PIPE_RECV_MSG_RET_FAILURE;
         }
     }
 
@@ -250,7 +250,7 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
         {
             case ERROR_BROKEN_PIPE:
                 LOG_INFO(logger, (_T("Pipe server closed connection")));
-                return RECV_MSG_RET_SHUTDOWN;
+                return PIPE_RECV_MSG_RET_SHUTDOWN;
             case ERROR_IO_PENDING:
             {
                 DWORD wait_result;
@@ -268,13 +268,13 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
                     case WAIT_OBJECT_0 + 1:
                         LOG_DEBUG(logger, (_T("Pipe thread: Received exit event")));
                         CancelIoEx(pipe->handle, &pipe->read_overlapped);
-                        return RECV_MSG_RET_EXIT;
+                        return PIPE_RECV_MSG_RET_EXIT;
                     case WAIT_FAILED:
                         LOG_ERROR(logger, (_T("Error %d while waiting for pipe handles"), GetLastError()));
-                        return RECV_MSG_RET_FAILURE;
+                        return PIPE_RECV_MSG_RET_FAILURE;
                     default:
                         LOG_ERROR(logger, (_T("Unknown return value from WaitForMultipleObjects")));
-                        return RECV_MSG_RET_FAILURE;
+                        return PIPE_RECV_MSG_RET_FAILURE;
                 }
             }
             case ERROR_MORE_DATA:
@@ -287,7 +287,7 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
                 if (!success)
                 {
                     LOG_ERROR(logger, (_T("Error %d while getting remaining message length"), GetLastError()));
-                    return RECV_MSG_RET_FAILURE;
+                    return PIPE_RECV_MSG_RET_FAILURE;
                 }
 
                 new_buffer_size = message_length + remaining;
@@ -299,7 +299,7 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
                         (unsigned long)*inout_buffer_size,
                         (unsigned long)new_buffer_size
                     ));
-                    return RECV_MSG_RET_FAILURE;
+                    return PIPE_RECV_MSG_RET_FAILURE;
                 }
                 *inout_buffer = new_buffer;
                 *inout_buffer_size = new_buffer_size;
@@ -307,13 +307,13 @@ static RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pipe_dat
             }
             default:
                 LOG_ERROR(logger, (_T("Reading from pipe failed: Error %d"), last_error));
-                return RECV_MSG_RET_FAILURE;
+                return PIPE_RECV_MSG_RET_FAILURE;
         }
     }
 
     LOG_TRACE(logger, (_T("Read message from pipe")));
 
-    return RECV_MSG_RET_SUCCESS;
+    return PIPE_RECV_MSG_RET_SUCCESS;
 }
 
 BOOL pipe_handler(logger_instance* const logger, connection_data* const conn)
@@ -329,12 +329,12 @@ BOOL pipe_handler(logger_instance* const logger, connection_data* const conn)
     while (TRUE)
     {
         size_t message_length;
-        RECV_MSG_RET recv_ret;
+        PIPE_RECV_MSG_RET recv_ret;
 
         recv_ret = pipe_receive_message(logger, &conn->pipe, &buffer, &buffer_size, &message_length);
-        if (recv_ret != RECV_MSG_RET_SUCCESS)
+        if (recv_ret != PIPE_RECV_MSG_RET_SUCCESS)
         {
-            ret = recv_ret != RECV_MSG_RET_FAILURE;
+            ret = recv_ret != PIPE_RECV_MSG_RET_FAILURE;
             break;
         }
 
