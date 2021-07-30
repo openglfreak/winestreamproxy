@@ -116,7 +116,7 @@ find_wine() {
            is_prefix_win64 "${WINEPREFIX:-$HOME/.wine}"; then
             WINEARCH=win64
         fi
-        if [ x"${WINEARCH}" = x'win64' ] && is_elf64 "${exe_path}" && \
+        if [ x"${WINEARCH}" = x'win64' ] && is_elf64 "${dll_path}" && \
            { is_in_path wine64 || wine64 --version > /dev/null 2>&1; }; then
             wine=wine64
         elif is_in_path wine || wine --version > /dev/null 2>&1; then
