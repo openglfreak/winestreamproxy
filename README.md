@@ -49,22 +49,38 @@ in the top directory as root.
 
 ## Usage
 
+If you're using a release tarball, the below commands all need to be run in the directory where the tarball was
+extracted. Alternatively the script paths in the commands can be expanded to the full paths of the scripts.
+
+Use the commands marked with `(system)` for system-wide installations and the commands marked with `(tarball)` for
+the release tarballs.
+
 After installing the program, it can be launched by simply typing
 ```sh
-winestreamproxy
+ (system) winestreamproxy
+(tarball) ./start.sh
 ```
 into a terminal (assuming your `$PATH` is set up correctly).
 
 There are some command line parameters. You can find out more about these by running
 ```sh
-winestreamproxy --help
+ (system) winestreamproxy --help
+(tarball) ./start.sh --help
+```
+in a terminal.
+
+To stop a running proxy, run
+```sh
+ (system) winestreamproxy-stop
+(tarball) ./stop.sh
 ```
 in a terminal.
 
 If you want to run Winestreamproxy and another program (e.g. a game) in the same command (e.g. for use as the command
 prefix in Lutris), use the included wrapper script. This script can be used by prepending
 ```sh
-winestreamproxy-wrapper
+ (system) winestreamproxy-wrapper
+(tarball) ./wrapper.sh
 ```
 to the command to be run. Note that it is currently not possible to pass command line parameters to Winestreamproxy
 through the wrapper script - if you need to do this, you will have to write your own wrapper script that includes
@@ -75,6 +91,7 @@ variable first.
 
 Configuration files can be put in any of the following locations:
 
+- &lt;extracted tarball&gt;/settings.conf
 - /usr/local/lib/winestreamproxy/settings.conf
 - Any of $XDG_CONFIG_DIRS/winestreamproxy/settings.conf
 - $XDG_CONFIG_HOME/winestreamproxy/settings.conf
@@ -84,7 +101,14 @@ See the default settings.conf for possible configuration options.
 
 Once you have a working configuration, you can run
 ```sh
-winestreamproxy-install
+ (system) winestreamproxy-install
+(tarball) ./install.sh
 ```
 to install the Winestreamproxy service into a prefix. It will then be started every time the prefix is started.
 After changing any settings you need to install the service again, otherwise it will continue to use the old settings.
+
+To uninstall the service, run
+```sh
+ (system) winestreamproxy-uninstall
+(tarball) ./uninstall.sh
+```
