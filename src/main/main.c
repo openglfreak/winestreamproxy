@@ -45,7 +45,7 @@ static void print_help(TCHAR const* const arg0)
 #ifdef __cplusplus
 extern "C"
 #endif /* defined(__cplusplus) */
-int __cdecl _tmain(int const argc, TCHAR* argv[])
+int _tmain(int const argc, TCHAR* argv[])
 {
     TCHAR* pipe_arg;
     TCHAR* socket_arg;
