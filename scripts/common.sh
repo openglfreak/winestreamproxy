@@ -77,9 +77,15 @@ load_settings() {
     system="${WINESTREAMPROXY_SYSTEM:-${system}}"
 }
 
-# Function that can be used to check if a Wine prefix is a 64-bit prefix.
-is_prefix_win64() {
-    [ -e "$1/system.reg" ] && grep -q '^#arch=win64$' "$1/system.reg" && \
+# Function that can be used to check the architecture of a Wine prefix.
+# Takes either "win64" or "win32" as the first parameter and the prefix
+# path as the second parameter.
+check_prefix_arch() {
+    case "$1" in win32|win64) :;; *)
+        printf 'error: invalid prefix architecture: %s\n' "$1" >2
+        return 1
+    esac
+    [ -e "$2/system.reg" ] && grep -q "^#arch=$1$" "$2/system.reg" && \
     return || return 1
 }
 
@@ -112,9 +118,12 @@ find_wine() {
     if [ x"${WINE+set}" = x'set' ]; then
         wine="${WINE}"
     else
-        if ! [ x"${WINEARCH+set}" = x'set' ] && \
-           is_prefix_win64 "${WINEPREFIX:-$HOME/.wine}"; then
-            WINEARCH=win64
+        if ! [ x"${WINEARCH+set}" = x'set' ]; then
+            if check_prefix_arch win64 "${WINEPREFIX:-${HOME}/.wine}"; then
+                WINEARCH=win64
+            elif check_prefix_arch win32 "${WINEPREFIX:-${HOME}/.wine}"; then
+                WINEARCH=win32
+            fi
         fi
         if [ x"${WINEARCH}" = x'win64' ] && is_elf64 "${dll_path}" && \
            { is_in_path wine64 || wine64 --version > /dev/null 2>&1; }; then
