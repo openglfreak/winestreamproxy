@@ -41,8 +41,7 @@ TCHAR* pipe_name_to_path(logger_instance* const logger, TCHAR const* const named
     }
 
     RtlCopyMemory(pipe_path, pipe_path_prefix, sizeof(TCHAR) * static_strlen(pipe_path_prefix));
-    RtlCopyMemory(&pipe_path[sizeof(TCHAR) * static_strlen(pipe_path_prefix)], named_pipe_name,
-                  sizeof(TCHAR) * (name_len + 1));
+    RtlCopyMemory(&pipe_path[static_strlen(pipe_path_prefix)], named_pipe_name, sizeof(TCHAR) * (name_len + 1));
 
     return pipe_path;
 }
