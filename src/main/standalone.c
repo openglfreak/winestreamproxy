@@ -294,6 +294,7 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
 #endif
         if (deallocate_pipe_path)
             deallocate_path(params.paths.named_pipe_path);
+        return 1;
     }
 
     exit_event = params.exit_event;
