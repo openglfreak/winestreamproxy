@@ -379,7 +379,6 @@ int double_spawn_proc(void* aux_data, size_t aux_data_size)
 
     assert(aux_data_size == 0);
 
-    HeapFree(GetProcessHeap(), 0, aux_data);
     return standalone_main_2(verbose, system, pipe_name, socket_path);
 }
 

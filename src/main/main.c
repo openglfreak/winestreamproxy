@@ -189,16 +189,10 @@ extern "C"
 #endif /* defined(__cplusplus) */
 int _tmain(int const argc, TCHAR* argv[])
 {
-    BOOL exit;
-    int dsret;
     logger_instance* early_logger;
     main_option_values optvals;
     main_positionals positionals;
     size_t i;
-
-    dsret = double_spawn_main_hook(&exit);
-    if (exit)
-        return dsret;
 
     if (!log_create_logger(early_log_message, (unsigned char)sizeof(TCHAR), &early_logger))
     {

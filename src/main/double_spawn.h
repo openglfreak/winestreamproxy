@@ -12,11 +12,10 @@
 #ifndef __WINESTREAMPROXY_MAIN_DOUBLE_SPAWN_H__
 #define __WINESTREAMPROXY_MAIN_DOUBLE_SPAWN_H__
 
+#include "bool.h"
 #include <winestreamproxy/logger.h>
 
-#include <windef.h>
-#include <winbase.h>
-#include <winnt.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +23,7 @@ extern "C" {
 
 typedef int (*double_spawn_callback)(void* aux_data, size_t aux_data_size);
 
-extern int double_spawn_main_hook(BOOL* out_exit);
-extern BOOL double_spawn_fork(logger_instance* logger, double_spawn_callback callback, void const* aux_data,
+extern bool double_spawn_fork(logger_instance* logger, double_spawn_callback callback, void const* aux_data,
                               size_t aux_data_size);
 extern void double_spawn_exit_parent(logger_instance* logger);
 

@@ -8,186 +8,41 @@
  *   E-Mail address: openglfreak@googlemail.com
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
+#include "bool.h"
 #include "double_spawn.h"
 #include <winestreamproxy/logger.h>
 
-#include <errno.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <wchar.h>
 
 #include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
-#include <wincon.h>
 #include <psapi.h>
 #include <tlhelp32.h>
-
-#define DOUBLE_SPAWN_ENVVAR_NAME _T("__WINESTREAMPROXY_DOUBLE_SPAWN_DATA")
 
 #define add_funcptrs(type, a, b) ((type)((ULONG_PTR)(a) + (ULONG_PTR)(b)))
 #define subtract_funcptrs(type, a, b) ((type)((ULONG_PTR)(a) - (ULONG_PTR)(b)))
 
 HANDLE double_spawn_parent_notify_event = INVALID_HANDLE_VALUE;
 
-static unsigned char parse_hex_digit(TCHAR const chr)
-{
-    return chr >= _T('0') && chr <= _T('9') ? chr - _T('0')
-           : chr >= _T('A') && chr <= _T('F') ? chr - _T('A') + 10
-           : chr >= _T('a') && chr <= _T('f') ? chr - _T('a') + 10
-           : 0xFF;
-}
-
-static TCHAR get_hex_digit(unsigned char const val)
-{
-    static TCHAR hex_digits[] = { _T('0'), _T('1'), _T('2'), _T('3'), _T('4'), _T('5'), _T('6'), _T('7'), _T('8'),
-                                  _T('9'), _T('A'), _T('B'), _T('C'), _T('D'), _T('E'), _T('F') };
-    return hex_digits[val];
-}
-
-static BOOL decode_hex_string(TCHAR const* input, BYTE* output, size_t size_bytes)
-{
-    while (size_bytes--)
-    {
-        unsigned char high_nibble, low_nibble;
-
-        high_nibble = parse_hex_digit(*input++);
-        if (high_nibble > 0xF)
-            return FALSE;
-        low_nibble = parse_hex_digit(*input++);
-        if (low_nibble > 0xF)
-            return FALSE;
-        *output++ = (high_nibble << 4) | low_nibble;
-    }
-
-    return TRUE;
-}
-
-static void encode_hex_string(BYTE const* input, TCHAR* output, size_t size_bytes)
-{
-    while (size_bytes--)
-    {
-        BYTE val;
-
-        val = *input++;
-        *output++ = get_hex_digit((val >> 4) & 0xF);
-        *output++ = get_hex_digit(val & 0xF);
-    }
-    *output = _T('\0');
-}
-
-static BOOL get_envvar(TCHAR const* const name, TCHAR** const out_content, size_t* const out_length)
-{
-    TCHAR* content;
-    size_t capacity;
-    DWORD length;
-
-    capacity = 32;
-    while (TRUE)
-    {
-        content = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, capacity * sizeof(TCHAR));
-        if (content == NULL)
-            return FALSE;
-
-        length = GetEnvironmentVariable(name, content, capacity);
-        if (length < capacity)
-            break;
-
-        HeapFree(GetProcessHeap(), 0, content);
-        capacity *= 2;
-    }
-
-    if (length == 0)
-    {
-        DWORD err;
-
-        err = GetLastError();
-        if (content)
-            HeapFree(GetProcessHeap(), 0, content);
-        if (err == ERROR_ENVVAR_NOT_FOUND)
-            content = 0;
-        else
-            return FALSE;
-    }
-    else
-    {
-        TCHAR* new_content;
-
-        new_content = (TCHAR*)HeapReAlloc(GetProcessHeap(), 0, content, length);
-        if (new_content)
-            content = new_content;
-    }
-
-    *out_content = content;
-    *out_length = length;
-    return TRUE;
-}
-
-static BOOL get_and_decode_envvar(TCHAR const* const name, BYTE** const out_data, size_t* const out_data_size)
-{
-    TCHAR* envvar_content;
-    size_t envvar_content_length;
-    size_t decoded_content_size;
-    BYTE* decoded_content;
-
-    if (!get_envvar(name, &envvar_content, &envvar_content_length))
-        return FALSE;
-
-    if (!envvar_content)
-    {
-        *out_data = 0;
-        return TRUE;
-    }
-
-    if (envvar_content_length % 2 != 0)
-    {
-        HeapFree(GetProcessHeap(), 0, envvar_content);
-        return FALSE;
-    }
-
-    decoded_content_size = envvar_content_length / 2;
-    decoded_content = (BYTE*)HeapAlloc(GetProcessHeap(), 0, decoded_content_size);
-    if (decoded_content == NULL)
-    {
-        HeapFree(GetProcessHeap(), 0, envvar_content);
-        return FALSE;
-    }
-
-    if (!decode_hex_string(envvar_content, decoded_content, decoded_content_size))
-    {
-        HeapFree(GetProcessHeap(), 0, decoded_content);
-        HeapFree(GetProcessHeap(), 0, envvar_content);
-        return FALSE;
-    }
-
-    HeapFree(GetProcessHeap(), 0, envvar_content);
-    *out_data = decoded_content;
-    *out_data_size = decoded_content_size;
-    return TRUE;
-}
-
 static DWORD get_parent_process_id(DWORD target_process_id)
 {
     HANDLE tool_help_snapshot;
     BOOL b;
     PROCESSENTRY32 process;
-    DWORD ret;
 
     tool_help_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (tool_help_snapshot == INVALID_HANDLE_VALUE)
         return 0;
 
     process.dwSize = sizeof(PROCESSENTRY32);
-    ret = 0;
     for (b = Process32First(tool_help_snapshot, &process); b; b = Process32Next(tool_help_snapshot, &process))
         if (process.th32ProcessID == target_process_id)
-        {
-            ret = process.th32ParentProcessID;
             break;
-        }
 
     CloseHandle(tool_help_snapshot);
-    return ret;
+    return b ? process.th32ParentProcessID : 0;
 }
 
 static BOOL verify_parent_process(HANDLE process_handle)
@@ -218,95 +73,93 @@ typedef struct ds_data_intl {
     HANDLE parent_process_handle;
     HANDLE parent_notify_event;
     double_spawn_callback callback;
+    size_t aux_data_size;
 } ds_data_intl;
 
-int double_spawn_main_hook(BOOL* const out_exit)
+DWORD __stdcall double_spawn_main(ds_data_intl* const data)
 {
-    BYTE* data;
-    size_t data_size;
     double_spawn_callback callback;
     int ret;
 
-    if (!get_and_decode_envvar(DOUBLE_SPAWN_ENVVAR_NAME, &data, &data_size))
-    {
-        *out_exit = TRUE;
-        return 1;
-    }
-    if (!data)
-    {
-        *out_exit = FALSE;
-        return 0;
-    }
-
-    if (!verify_parent_process(((ds_data_intl*)data)->parent_process_handle))
+    if (!verify_parent_process(data->parent_process_handle))
     {
         HeapFree(GetProcessHeap(), 0, data);
-        *out_exit = FALSE;
-        return 0;
+        ret = 1;
+        goto done;
     }
-    CloseHandle(((ds_data_intl*)data)->parent_process_handle);
+    CloseHandle(data->parent_process_handle);
 
-    double_spawn_parent_notify_event = ((ds_data_intl*)data)->parent_notify_event;
-    callback = add_funcptrs(double_spawn_callback, ((ds_data_intl*)data)->callback, &double_spawn_main_hook);
+    double_spawn_parent_notify_event = data->parent_notify_event;
+    callback = add_funcptrs(double_spawn_callback, data->callback, &double_spawn_main);
+    ret = callback(data + 1, data->aux_data_size);
 
-    ret = callback(data + sizeof(ds_data_intl), data_size - sizeof(ds_data_intl));
-
-    HeapFree(GetProcessHeap(), 0, data);
-    *out_exit = TRUE;
+done:
+    VirtualFree(data, 0, MEM_RELEASE);
     return ret;
 }
 
-static BOOL set_ds_data(logger_instance* const logger, ds_data_intl const data, BYTE const* aux_data, size_t aux_data_size)
-{
-    size_t envvar_content_length;
-    TCHAR* envvar_content;
-    BOOL ret;
-
-    envvar_content_length = ((sizeof(ds_data_intl) + aux_data_size) * 2 + 1);
-    envvar_content = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, envvar_content_length * sizeof(TCHAR));
-    if (envvar_content == NULL)
-    {
-        LOG_CRITICAL(logger, (
-            _T("Failed to allocate %lu bytes"),
-            (unsigned long)(envvar_content_length * sizeof(TCHAR))
-        ));
-        return FALSE;
-    }
-
-    encode_hex_string((BYTE*)&data, envvar_content, sizeof(ds_data_intl));
-    encode_hex_string(aux_data, &envvar_content[sizeof(ds_data_intl) * 2], aux_data_size);
-
-    ret = SetEnvironmentVariable(DOUBLE_SPAWN_ENVVAR_NAME, envvar_content) != 0;
-    if (!ret)
-        LOG_CRITICAL(logger, (
-            _T("Failed to set environment variable: Error %d"),
-            GetLastError()
-        ));
-
-    HeapFree(GetProcessHeap(), 0, envvar_content);
-    return ret;
-}
-
-static BOOL spawn_process(logger_instance* const logger, HANDLE const event)
+static bool spawn_process(logger_instance* const logger, ds_data_intl const* const data_intl,
+                          void const* const aux_data)
 {
     STARTUPINFO sinfo;
     PROCESS_INFORMATION procinfo;
     DWORD status;
+    LPVOID child_memory;
+    SIZE_T written;
+    CONTEXT ctx;
     HANDLE wait_handles[2];
     DWORD err;
 
     RtlZeroMemory(&sinfo, sizeof(sinfo));
     sinfo.cb = sizeof(sinfo);
-    status = CreateProcess(NULL, GetCommandLine(), NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS, NULL, NULL, &sinfo,
-                           &procinfo);
+    status = CreateProcess(NULL, GetCommandLine(), NULL, NULL, TRUE, BELOW_NORMAL_PRIORITY_CLASS | CREATE_SUSPENDED,
+                           NULL, NULL, &sinfo, &procinfo);
     if (!status)
     {
         LOG_CRITICAL(logger, (_T("Could not start process: Error %d"), GetLastError()));
-        return FALSE;
+        return false;
+    }
+
+    child_memory = VirtualAllocEx(procinfo.hProcess, NULL, sizeof(*data_intl) + data_intl->aux_data_size,
+                                  MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    if (!child_memory)
+    {
+        LOG_CRITICAL(logger, (_T("Could not allocate memory in child process: Error %d"), GetLastError()));
+        goto err_child_modify;
+    }
+    if (!WriteProcessMemory(procinfo.hProcess, child_memory, data_intl, sizeof(*data_intl), &written)
+        || written != sizeof(*data_intl)
+        || !WriteProcessMemory(procinfo.hProcess, (char*)child_memory + sizeof(*data_intl), aux_data,
+                               data_intl->aux_data_size, &written)
+        || written != data_intl->aux_data_size)
+    {
+        LOG_CRITICAL(logger, (_T("Could not write to memory in child process: Error %d"), GetLastError()));
+        goto err_child_modify;
+    }
+
+    ctx.ContextFlags = CONTEXT_INTEGER;
+    if (!GetThreadContext(procinfo.hThread, &ctx))
+    {
+        LOG_CRITICAL(logger, (_T("Could not get thread context of child process: Error %d"), GetLastError()));
+        goto err_child_modify;
+    }
+#ifdef __x86_64__
+    ctx.Rcx = (DWORD64)double_spawn_main;
+    ctx.Rdx = (DWORD64)child_memory;
+#elif defined(__i386__)
+    ctx.Eax = (DWORD)double_spawn_main;
+    ctx.Ebx = (DWORD)child_memory;
+#else
+#error "Unsupported architecture"
+#endif
+    if (!SetThreadContext(procinfo.hThread, &ctx) || ResumeThread(procinfo.hThread) == (DWORD)-1)
+    {
+        LOG_CRITICAL(logger, (_T("Could not set thread context of child process: Error %d"), GetLastError()));
+        goto err_child_modify;
     }
     CloseHandle(procinfo.hThread);
 
-    wait_handles[0] = event;
+    wait_handles[0] = data_intl->parent_notify_event;
     wait_handles[1] = procinfo.hProcess;
     do {
         status = WaitForMultipleObjects(sizeof(wait_handles) / sizeof(wait_handles[0]), wait_handles, FALSE, INFINITE);
@@ -317,26 +170,40 @@ static BOOL spawn_process(logger_instance* const logger, HANDLE const event)
     {
         case WAIT_OBJECT_0:
         case WAIT_OBJECT_0 + 1:
-            return TRUE;
+            return true;
         case WAIT_FAILED:
             LOG_ERROR(logger, (_T("WaitForMultipleObjects failed: Error %d"), err));
             break;
         default:
             LOG_ERROR(logger, (_T("Unexpected WaitForMultipleObjects return value: %d"), status));
     }
-    return FALSE;
+    return false;
+
+err_child_modify:
+    CloseHandle(procinfo.hThread);
+    TerminateProcess(procinfo.hProcess, 1);
+    CloseHandle(procinfo.hProcess);
+    return false;
 }
 
-BOOL double_spawn_fork(logger_instance* const logger, double_spawn_callback const callback, void const* aux_data,
+static HANDLE get_current_process_handle(void)
+{
+    HANDLE currproc = GetCurrentProcess(), handle;
+    if (!DuplicateHandle(currproc, currproc, currproc, &handle, 0, TRUE, DUPLICATE_SAME_ACCESS))
+        return INVALID_HANDLE_VALUE;
+    return handle;
+}
+
+bool double_spawn_fork(logger_instance* const logger, double_spawn_callback const callback, void const* aux_data,
                        size_t const aux_data_size)
 {
     ds_data_intl data_intl;
     SECURITY_ATTRIBUTES sattrs;
-    BOOL ret;
+    bool ret;
 
-    if (!DuplicateHandle(GetCurrentProcess(), GetCurrentProcess(), GetCurrentProcess(),
-                         &data_intl.parent_process_handle, 0, TRUE, DUPLICATE_SAME_ACCESS))
-        return FALSE;
+    data_intl.parent_process_handle = get_current_process_handle();
+    if (data_intl.parent_process_handle == INVALID_HANDLE_VALUE)
+        return false;
 
     sattrs.nLength = sizeof(SECURITY_ATTRIBUTES);
     sattrs.lpSecurityDescriptor = NULL;
@@ -345,13 +212,13 @@ BOOL double_spawn_fork(logger_instance* const logger, double_spawn_callback cons
     if (!data_intl.parent_notify_event)
     {
         CloseHandle(data_intl.parent_process_handle);
-        return FALSE;
+        return false;
     }
 
-    data_intl.callback = subtract_funcptrs(double_spawn_callback, callback, &double_spawn_main_hook);
+    data_intl.callback = subtract_funcptrs(double_spawn_callback, callback, &double_spawn_main);
+    data_intl.aux_data_size = aux_data_size;
 
-    ret = set_ds_data(logger, data_intl, (BYTE const*)aux_data, aux_data_size)
-          && spawn_process(logger, data_intl.parent_notify_event);
+    ret = spawn_process(logger, &data_intl, aux_data);
 
     CloseHandle(data_intl.parent_notify_event);
     CloseHandle(data_intl.parent_process_handle);
