@@ -98,8 +98,6 @@ static void service_set_status_stopped(logger_instance* const logger)
         LOG_ERROR(logger, (_T("Failed to set service status to stopped: Error %d"), GetLastError()));
 }
 
-static HANDLE exit_event;
-
 static void service_set_status_running(logger_instance* const logger, proxy_data* const proxy,
                                        PROXY_STATE const prev_state, PROXY_STATE const new_state)
 {
@@ -114,7 +112,7 @@ static void service_set_status_running(logger_instance* const logger, proxy_data
     if (SetServiceStatus(service_status_handle , &service_status) == 0)
     {
         LOG_CRITICAL(logger, (_T("Failed to set service status to running: Error %d"), GetLastError()));
-        SetEvent(exit_event);
+        SetEvent(service_exit_event);
     }
 }
 
@@ -248,7 +246,7 @@ void CALLBACK service_proc(DWORD const argc, LPTSTR* const argv)
 
     lower_process_priority(logger);
 
-    exit_event = params.exit_event;
+    service_exit_event = params.exit_event;
 
     proxy_enter_loop(proxy);
 
