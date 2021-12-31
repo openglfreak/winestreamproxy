@@ -231,14 +231,13 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
     BOOL deallocate_pipe_path;
     proxy_parameters params;
     proxy_data* proxy;
+    int ret = 1;
 
     if (pipe_arg[0] != _T('\\') || pipe_arg[1] != _T('\\'))
     {
         params.paths.named_pipe_path = pipe_name_to_path(logger, pipe_arg);
         if (!params.paths.named_pipe_path)
-        {
-            return 1;
-        }
+            goto err_name2path;
         deallocate_pipe_path = TRUE;
     }
     else
@@ -250,52 +249,24 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
 #ifdef _UNICODE
     params.paths.unix_socket_path = wide_to_narrow(logger, socket_arg);
     if (!params.paths.unix_socket_path)
-    {
-        if (deallocate_pipe_path)
-            deallocate_path(params.paths.named_pipe_path);
-        return 1;
-    }
+        goto err_wide2narrow;
 #else
     params.paths.unix_socket_path = socket_arg;
 #endif
 
     params.exit_event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!params.exit_event)
-    {
-#ifdef _UNICODE
-        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
-#endif
-        if (deallocate_pipe_path)
-            deallocate_path(params.paths.named_pipe_path);
-        return 1;
-    }
+        goto err_create_event;
 
     params.state_change_callback = is_ds_child ? state_change_callback : 0;
 
     if (!proxy_create(logger, params, &proxy))
-    {
-        CloseHandle(params.exit_event);
-#ifdef _UNICODE
-        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
-#endif
-        if (deallocate_pipe_path)
-            deallocate_path(params.paths.named_pipe_path);
-        return 1;
-    }
+        goto err_proxy_create;
 
     lower_process_priority(logger);
 
     if (system && !make_process_system(logger, params.exit_event))
-    {
-        proxy_destroy(proxy);
-        CloseHandle(params.exit_event);
-#ifdef _UNICODE
-        HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
-#endif
-        if (deallocate_pipe_path)
-            deallocate_path(params.paths.named_pipe_path);
-        return 1;
-    }
+        goto err_make_system;
 
     exit_event = params.exit_event;
     if (!SetConsoleCtrlHandler(console_ctrl_handler, TRUE))
@@ -304,15 +275,21 @@ static int standalone_main_3(logger_instance* const logger, BOOL const is_ds_chi
 
     proxy_enter_loop(proxy);
 
+    ret = 0;
+
+err_make_system:
     proxy_destroy(proxy);
+err_proxy_create:
     CloseHandle(params.exit_event);
+err_create_event:
 #ifdef _UNICODE
     HeapFree(GetProcessHeap(), 0, (char*)params.paths.unix_socket_path);
+err_wide2narrow:
 #endif
     if (deallocate_pipe_path)
         deallocate_path(params.paths.named_pipe_path);
-
-    return 0;
+err_name2path:
+    return ret;
 }
 
 static int standalone_main_2(unsigned int const verbose, int const system, TCHAR const* const pipe_arg,
@@ -383,11 +360,44 @@ int double_spawn_proc(void* aux_data, size_t aux_data_size)
     return standalone_main_2(verbose, system, pipe_name, socket_path);
 }
 
+int put_in_background(logger_instance* logger, unsigned int const verbose, int const system,
+                      TCHAR const* const pipe_arg, TCHAR const* const socket_arg)
+{
+    size_t pipe_name_len, socket_path_len;
+    size_t data_size;
+    char* data;
+
+    pipe_name_len = _tcslen(pipe_arg);
+    socket_path_len = _tcslen(socket_arg);
+
+    data_size = sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR)
+                + (socket_path_len + 1) * sizeof(TCHAR);
+    data = (char*)HeapAlloc(GetProcessHeap(), 0, data_size);
+    if (!data)
+    {
+        LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)data_size));
+        log_destroy_logger(logger);
+        return 1;
+    }
+
+    *(unsigned int*)data = verbose;
+    *(int*)(data + sizeof(unsigned int)) = system;
+    RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int), pipe_arg, (pipe_name_len + 1) * sizeof(TCHAR));
+    RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR), socket_arg,
+                    (socket_path_len + 1) * sizeof(TCHAR));
+
+    double_spawn_fork(logger, double_spawn_proc, data, data_size);
+
+    HeapFree(GetProcessHeap(), 0, data);
+    return 0;
+}
+
 int standalone_main(unsigned int const verbose, int const foreground, int const system, TCHAR const* const pipe_arg,
                     TCHAR const* const socket_arg)
 {
     logger_instance* logger;
     LOG_LEVEL log_level;
+    int ret;
 
     if (!log_create_logger(log_message, (unsigned char)sizeof(TCHAR), &logger))
     {
@@ -411,37 +421,10 @@ int standalone_main(unsigned int const verbose, int const foreground, int const 
     LOG_TRACE(logger, (_T("Created main logger")));
 
     if (foreground)
-        standalone_main_3(logger, FALSE, system, pipe_arg, socket_arg);
+        ret = standalone_main_3(logger, FALSE, system, pipe_arg, socket_arg);
     else
-    {
-        size_t pipe_name_len, socket_path_len;
-        size_t data_size;
-        char* data;
-
-        pipe_name_len = _tcslen(pipe_arg);
-        socket_path_len = _tcslen(socket_arg);
-
-        data_size = sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR)
-                    + (socket_path_len + 1) * sizeof(TCHAR);
-        data = (char*)HeapAlloc(GetProcessHeap(), 0, data_size);
-        if (!data)
-        {
-            LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)data_size));
-            log_destroy_logger(logger);
-            return 1;
-        }
-
-        *(unsigned int*)data = verbose;
-        *(int*)(data + sizeof(unsigned int)) = system;
-        RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int), pipe_arg, (pipe_name_len + 1) * sizeof(TCHAR));
-        RtlCopyMemory(data + sizeof(unsigned int) + sizeof(int) + (pipe_name_len + 1) * sizeof(TCHAR), socket_arg,
-                      (socket_path_len + 1) * sizeof(TCHAR));
-
-        double_spawn_fork(logger, double_spawn_proc, data, data_size);
-
-        HeapFree(GetProcessHeap(), 0, data);
-    }
+        ret = put_in_background(logger, verbose, system, pipe_arg, socket_arg);
 
     log_destroy_logger(logger);
-    return 0;
+    return ret;
 }
