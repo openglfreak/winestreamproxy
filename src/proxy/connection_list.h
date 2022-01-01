@@ -12,20 +12,31 @@
 #ifndef __WINESTREAMPROXY_PROXY_CONNECTION_LIST_H__
 #define __WINESTREAMPROXY_PROXY_CONNECTION_LIST_H__
 
+#include "../bool.h"
 #include "data/connection_list.h"
 #include <winestreamproxy/logger.h>
 
 #include <windef.h>
+#include <winbase.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern BOOL connection_list_allocate_entry(logger_instance* logger, connection_list* connection_list,
+#define connection_list_lock(connection_list) EnterCriticalSection(&(connection_list)->lock)
+#define connection_list_start(connection_list) ((connection_list)->start)
+#define connection_list_next(entry) ((entry)->next)
+#define connection_list_end(connection_list) ((connection_list)->end)
+#define connection_list_previous(entry) ((entry)->previous)
+#define connection_list_unlock(connection_list) LeaveCriticalSection(&(connection_list)->lock)
+
+extern bool connection_list_initialize(logger_instance* logger, connection_list* connection_list);
+extern bool connection_list_allocate_entry(logger_instance* logger, connection_list* connection_list,
                                            connection_data** out_connection);
 extern void connection_list_deallocate_entry(logger_instance* logger, connection_list* connection_list,
                                              connection_data* connection);
 extern void connection_list_deallocate(logger_instance* logger, connection_list* connection_list);
+extern void connection_list_finalize(logger_instance* logger, connection_list* connection_list);
 
 #ifdef __cplusplus
 }

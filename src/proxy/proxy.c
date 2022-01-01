@@ -45,10 +45,18 @@ BOOL proxy_create(logger_instance* const logger, proxy_parameters const paramete
     proxy->logger = logger;
     proxy->parameters = parameters;
 
+    if (!connection_list_initialize(logger, &proxy->conn_list))
+    {
+        LOG_CRITICAL(logger, (_T("Could not initialize connection list")));
+        HeapFree(GetProcessHeap(), 0, proxy);
+        return FALSE;
+    }
+
     proxy->accept_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!proxy->accept_overlapped.hEvent)
     {
         LOG_CRITICAL(logger, (_T("Could not create an event for asynchronous connecting")));
+        connection_list_finalize(logger, &proxy->conn_list);
         HeapFree(GetProcessHeap(), 0, proxy);
         return FALSE;
     }
@@ -68,6 +76,7 @@ void proxy_destroy(proxy_data* const proxy)
     LOG_TRACE(logger, (_T("Destroying proxy object")));
 
     CloseHandle(proxy->accept_overlapped.hEvent);
+    connection_list_finalize(logger, &proxy->conn_list);
 
     HeapFree(GetProcessHeap(), 0, proxy);
 

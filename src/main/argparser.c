@@ -9,7 +9,7 @@
  *   PGP key fingerprint: 0535 3830 2F11 C888 9032 FAD2 7C95 CD70 C9E8 438D */
 
 #include "argparser.h"
-#include "bool.h"
+#include "../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <assert.h>

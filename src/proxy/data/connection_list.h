@@ -22,6 +22,7 @@ struct connection_list_entry {
 };
 
 typedef struct connection_list {
+    CRITICAL_SECTION        lock;
     connection_list_entry*  start;
     connection_list_entry*  end;
 } connection_list;

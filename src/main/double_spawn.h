@@ -12,7 +12,7 @@
 #ifndef __WINESTREAMPROXY_MAIN_DOUBLE_SPAWN_H__
 #define __WINESTREAMPROXY_MAIN_DOUBLE_SPAWN_H__
 
-#include "bool.h"
+#include "../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <stddef.h>
