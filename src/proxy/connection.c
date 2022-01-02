@@ -73,40 +73,40 @@ void connection_initialize(proxy_data* const proxy, connection_data* const conn)
     conn->proxy = proxy;
 }
 
-BOOL connection_prepare_threads(connection_data* const conn)
+bool connection_prepare_threads(connection_data* const conn)
 {
     LOG_TRACE(conn->proxy->logger, (_T("Preparing connection threads")));
 
     if (!thread_prepare(conn->proxy->logger, &pipe_thread_description, &conn->pipe.thread, conn))
-        return FALSE;
+        return false;
 
     if (!thread_prepare(conn->proxy->logger, &socket_thread_description, &conn->socket.thread, conn))
     {
         thread_dispose(conn->proxy->logger, &pipe_thread_description, &conn->pipe.thread);
-        return TRUE;
+        return false;
     }
 
     LOG_TRACE(conn->proxy->logger, (_T("Prepared connection threads")));
 
-    return TRUE;
+    return true;
 }
 
-BOOL connection_launch_threads(connection_data* const conn)
+bool connection_launch_threads(connection_data* const conn)
 {
     LOG_TRACE(conn->proxy->logger, (_T("Launching connection threads")));
 
     if (thread_run(conn->proxy->logger, &pipe_thread_description, &conn->pipe.thread) == THREAD_RUN_ERROR_OTHER)
-        return FALSE;
+        return false;
 
     if (thread_run(conn->proxy->logger, &socket_thread_description, &conn->socket.thread) == THREAD_RUN_ERROR_OTHER)
     {
         thread_stop(conn->proxy->logger, &pipe_thread_description, &conn->pipe.thread);
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(conn->proxy->logger, (_T("Launched connection threads")));
 
-    return TRUE;
+    return true;
 }
 
 void connection_close(connection_data* const conn)
