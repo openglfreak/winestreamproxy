@@ -16,15 +16,12 @@
 #include <tchar.h>
 #include <windef.h>
 #include <winbase.h>
-#include <winnt.h>
 
 static void make_hex_string(unsigned char const* bytes, size_t count, TCHAR* out_hex_str)
 {
     for (; count-- > 0; ++bytes)
     {
-        unsigned char byte;
-
-        byte = *bytes & 0xFF;
+        unsigned char byte = *bytes & 0xFF;
         if (byte < 0xA0)
             *out_hex_str = (byte >> 4) + _T('0');
         else
@@ -44,18 +41,27 @@ void dbg_output_bytes(logger_instance* const logger, TCHAR const* const prefix,
                       unsigned char const* const bytes, size_t const count)
 {
     TCHAR* hex_str;
+    TCHAR stack_buffer[256];
 
     LOG_TRACE(logger, (_T("Outputting array as hex string")));
 
-    hex_str = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, sizeof(TCHAR) * (2 * count + 1));
-    if (!hex_str)
+    if (sizeof(stack_buffer) <= sizeof(TCHAR) * (2 * count + 1))
+        hex_str = stack_buffer;
+    else
     {
-        LOG_DEBUG(logger, (_T("Could not allocate memory for hex string")));
-        return;
+        hex_str = (TCHAR*)HeapAlloc(GetProcessHeap(), 0, sizeof(TCHAR) * (2 * count + 1));
+        if (!hex_str)
+        {
+            LOG_DEBUG(logger, (_T("Could not allocate memory for hex string")));
+            return;
+        }
     }
+
     make_hex_string(bytes, count, hex_str);
     LOG_DEBUG(logger, (_T("%s%s"), prefix, hex_str));
-    HeapFree(GetProcessHeap(), 0, hex_str);
+
+    if (hex_str != stack_buffer)
+        HeapFree(GetProcessHeap(), 0, hex_str);
 
     LOG_TRACE(logger, (_T("Output array as hex string")));
 }
