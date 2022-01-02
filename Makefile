@@ -103,7 +103,7 @@ $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: 
         $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res $(spec_unixlib) \
         $(OBJ)/winestreamproxy_unixlib_unity_source.c Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) $(OBJ)/version.res \
+	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) $(OBJ)/version.res \
 	           -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) \
 	           $(OBJ)/winestreamproxy_unixlib_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o
@@ -113,7 +113,7 @@ $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: 
 $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o: $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res \
                                                              $(OBJ)/winestreamproxy_unity_source.c Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -mno-cygwin \
+	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -mno-cygwin \
 	           -b $(CROSSTARGET) $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe $(OBJ)/winestreamproxy_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe
@@ -131,14 +131,14 @@ $(OUT)/.version-debug: $(OBJ)/.version
 $(OUT)/winestreamproxy_unixlib-debug.dll.so: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res \
                                              $(spec_unixlib) $(sources_unixlib) $(headers_unixlib) Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) $(OBJ)/version-debug.res \
+	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) $(OBJ)/version-debug.res \
 	           -shared -o $(OUT)/winestreamproxy_unixlib-debug.dll.so $(spec_unixlib) \
 	           $(sources_unixlib)
 
 $(OUT)/winestreamproxy-debug.exe: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res $(sources) $(headers) \
                                   Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -mno-cygwin \
+	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -mno-cygwin \
 	           -b $(CROSSTARGET) $(OBJ)/version-debug.res -o $(OUT)/winestreamproxy-debug.exe $(sources)
 
 $(OUT)/settings.conf: scripts/settings.conf
