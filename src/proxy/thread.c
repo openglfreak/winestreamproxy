@@ -89,7 +89,7 @@ DWORD CALLBACK WINAPI dummy_thread_proc(LPVOID const voidp_tpdata)
     return ret;
 }
 
-BOOL thread_prepare(logger_instance* const logger, thread_description* const desc, thread_data* const data,
+bool thread_prepare(logger_instance* const logger, thread_description* const desc, thread_data* const data,
                     void* const thread_proc_param)
 {
     struct thread_proc_data* tpdata;
@@ -100,7 +100,7 @@ BOOL thread_prepare(logger_instance* const logger, thread_description* const des
     if (!tpdata)
     {
         LOG_CRITICAL(logger, (_T("Could not allocate %lu bytes"), (unsigned long)sizeof(struct thread_proc_data)));
-        return FALSE;
+        goto err_alloc;
     }
 
     tpdata->logger = logger;
@@ -112,24 +112,28 @@ BOOL thread_prepare(logger_instance* const logger, thread_description* const des
     if (!data->trigger_event)
     {
         LOG_CRITICAL(logger, (_T("Could not create thread trigger event: Error %d"), GetLastError()));
-        HeapFree(GetProcessHeap(), 0, tpdata);
-        return FALSE;
+        goto err_create_evt;
     }
 
     data->handle = CreateThread(NULL, 0, dummy_thread_proc, (LPVOID)tpdata, 0, NULL);
     if (data->handle == NULL)
     {
         LOG_CRITICAL(logger, (_T("Could not create thread: Error %d"), GetLastError()));
-        CloseHandle(data->trigger_event);
-        HeapFree(GetProcessHeap(), 0, tpdata);
-        return FALSE;
+        goto err_create_thd;
     }
 
     data->status = THREAD_STATUS_PREPARED;
 
     LOG_TRACE(logger, (_T("Prepared thread")));
 
-    return TRUE;
+    return true;
+
+err_create_thd:
+    CloseHandle(data->trigger_event);
+err_create_evt:
+    HeapFree(GetProcessHeap(), 0, tpdata);
+err_alloc:
+    return false;
 }
 
 THREAD_RUN_ERROR thread_run(logger_instance* const logger, thread_description* const desc, thread_data* const data)
@@ -157,7 +161,8 @@ THREAD_RUN_ERROR thread_run(logger_instance* const logger, thread_description* c
 
     if (!SetEvent(data->trigger_event))
     {
-        LOG_CRITICAL(logger, (_T("Signaling pipe thread trigger event failed: Error %d"), GetLastError()));
+        LOG_CRITICAL(logger, (_T("Signaling thread trigger event failed: Error %d"), GetLastError()));
+        InterlockedCompareExchange(&data->status, THREAD_STATUS_PREPARED, THREAD_STATUS_STARTING);
         return THREAD_RUN_ERROR_OTHER;
     }
 
@@ -166,7 +171,7 @@ THREAD_RUN_ERROR thread_run(logger_instance* const logger, thread_description* c
     return THREAD_RUN_ERROR_SUCCESS;
 }
 
-BOOL thread_stop(logger_instance* const logger, thread_description* const desc, thread_data* const data)
+bool thread_stop(logger_instance* const logger, thread_description* const desc, thread_data* const data)
 {
     (void)desc;
 
@@ -178,7 +183,7 @@ BOOL thread_stop(logger_instance* const logger, thread_description* const desc, 
         if (!SetEvent(data->trigger_event))
         {
             LOG_CRITICAL(logger, (_T("Signaling thread trigger event failed: Error %d"), GetLastError()));
-            return FALSE;
+            return false;
         }
     }
     else if (InterlockedCompareExchange(&data->status, THREAD_STATUS_STOPPING, THREAD_STATUS_STARTING)
@@ -187,15 +192,15 @@ BOOL thread_stop(logger_instance* const logger, thread_description* const desc, 
              == THREAD_STATUS_RUNNING)
     {
         if (!desc->stop_func(logger, data))
-            return FALSE;
+            return false;
     }
 
     LOG_TRACE(logger, (_T("Sent stop signal to thread")));
 
-    return TRUE;
+    return true;
 }
 
-extern BOOL thread_wait(logger_instance* const logger, thread_description* const desc, thread_data* const data)
+bool thread_wait(logger_instance* const logger, thread_description* const desc, thread_data* const data)
 {
     HANDLE thread_handle;
     DWORD wait_result;
@@ -207,7 +212,7 @@ extern BOOL thread_wait(logger_instance* const logger, thread_description* const
     if (!DuplicateHandle(GetCurrentProcess(), data->handle, GetCurrentProcess(), &thread_handle, SYNCHRONIZE, FALSE, 0))
     {
         LOG_ERROR(logger, (_T("Could not duplicate thread handle: Error %d"), GetLastError()));
-        return FALSE;
+        return false;
     }
 
     do {
@@ -222,17 +227,17 @@ extern BOOL thread_wait(logger_instance* const logger, thread_description* const
             break;
         case WAIT_FAILED:
             LOG_ERROR(logger, (_T("Waiting for thread exit failed: Error %d"), GetLastError()));
-            return FALSE;
+            return false;
         default:
             LOG_ERROR(logger, (
                 _T("Unexpected return value from WaitForSingleObject: Ret %d Error %d"),
                 wait_result,
                 GetLastError()
             ));
-            return FALSE;
+            return false;
     }
 
     LOG_TRACE(logger, (_T("Waiting for thread exit finished")));
 
-    return TRUE;
+    return true;
 }

@@ -13,6 +13,7 @@
 #define __WINESTREAMPROXY_PROXY_THREAD_H__
 
 #include "data/thread_data.h"
+#include "../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <windef.h>
@@ -29,12 +30,12 @@ typedef enum THREAD_RUN_ERROR {
     THREAD_RUN_ERROR_OTHER
 } THREAD_RUN_ERROR;
 
-extern BOOL thread_prepare(logger_instance* logger, thread_description* desc, thread_data* data,
+extern bool thread_prepare(logger_instance* logger, thread_description* desc, thread_data* data,
                            void* thread_proc_param);
 extern THREAD_RUN_ERROR thread_run(logger_instance* logger, thread_description* desc, thread_data* data);
-extern BOOL thread_stop(logger_instance* logger, thread_description* desc, thread_data* data);
+extern bool thread_stop(logger_instance* logger, thread_description* desc, thread_data* data);
 #define thread_dispose thread_stop
-extern BOOL thread_wait(logger_instance* logger, thread_description* desc, thread_data* data);
+extern bool thread_wait(logger_instance* logger, thread_description* desc, thread_data* data);
 
 #ifdef __cplusplus
 }
