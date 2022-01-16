@@ -13,6 +13,7 @@
 #define __WINESTREAMPROXY_PROXY_DATA_PIPE_DATA_H__
 
 #include "thread_data.h"
+#include "../../bool.h"
 
 #include <windef.h>
 #include <winbase.h>
@@ -20,9 +21,9 @@
 typedef struct pipe_data {
     HANDLE      handle;
     OVERLAPPED  read_overlapped;
-    BOOL        read_is_overlapped;
+    bool        read_is_overlapped;
     OVERLAPPED  write_overlapped;
-    BOOL        write_is_overlapped;
+    bool        write_is_overlapped;
     thread_data thread;
 } pipe_data;
 

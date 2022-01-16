@@ -12,6 +12,7 @@
 #ifndef __WINESTREAMPROXY_PROXY_DATA_THREAD_DATA_H__
 #define __WINESTREAMPROXY_PROXY_DATA_THREAD_DATA_H__
 
+#include "../../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <windef.h>
@@ -27,9 +28,9 @@ typedef enum THREAD_STATUS {
 
 typedef struct thread_data thread_data;
 
-typedef BOOL (*thread_proc_func)(logger_instance* logger, void* param);
+typedef bool (*thread_proc_func)(logger_instance* logger, void* param);
 typedef void (*thread_cleanup_func)(logger_instance* logger, thread_data* data, void* thread_proc_param);
-typedef BOOL (*thread_stop_func)(logger_instance* logger, thread_data* data);
+typedef bool (*thread_stop_func)(logger_instance* logger, thread_data* data);
 
 typedef struct thread_description {
     thread_proc_func    thread_proc;    /* The function to execute in the thread. */

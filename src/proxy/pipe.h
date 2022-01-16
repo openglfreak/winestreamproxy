@@ -14,6 +14,7 @@
 
 #include "data/connection_data.h"
 #include "data/pipe_data.h"
+#include "../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <windef.h>
@@ -24,19 +25,19 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern BOOL pipe_create_server(logger_instance* logger, pipe_data* pipe, TCHAR const* pipe_path);
-extern BOOL pipe_server_start_accept(logger_instance* logger, pipe_data* pipe, BOOL* out_is_async,
+extern bool pipe_create_server(logger_instance* logger, pipe_data* pipe, TCHAR const* pipe_path);
+extern bool pipe_server_start_accept(logger_instance* logger, pipe_data* pipe, bool* out_is_async,
                                      OVERLAPPED* inout_accept_overlapped);
-extern BOOL pipe_prepare(logger_instance* logger, pipe_data* pipe_data);
-extern BOOL pipe_server_wait_accept(logger_instance* logger, pipe_data* pipe, HANDLE exit_event,
+extern bool pipe_prepare(logger_instance* logger, pipe_data* pipe_data);
+extern bool pipe_server_wait_accept(logger_instance* logger, pipe_data* pipe, HANDLE exit_event,
                                     OVERLAPPED* inout_accept_overlapped);
-extern BOOL pipe_close_server(logger_instance* logger, pipe_data* pipe);
+extern bool pipe_close_server(logger_instance* logger, pipe_data* pipe);
 extern void pipe_cleanup(logger_instance* logger, connection_data* conn);
 
-extern BOOL pipe_stop_thread(logger_instance* logger, pipe_data* pipe); /* Only called if thread is running. */
-extern BOOL pipe_handler(logger_instance* logger, connection_data* conn);
+extern bool pipe_stop_thread(logger_instance* logger, pipe_data* pipe); /* Only called if thread is running. */
+extern bool pipe_handler(logger_instance* logger, connection_data* conn);
 
-extern BOOL pipe_send_message(logger_instance* logger, pipe_data* pipe, unsigned char const* message,
+extern bool pipe_send_message(logger_instance* logger, pipe_data* pipe, unsigned char const* message,
                               size_t message_length);
 
 #ifdef __cplusplus

@@ -47,9 +47,7 @@ BOOL CALLBACK socket_init_unixlib_once(PINIT_ONCE const init_once, PVOID const p
 
     unixlib_mod = LoadLibrary(_T(SOCKET_UNIXLIB_NAME));
     if (!unixlib_mod)
-    {
         return FALSE;
-    }
 
     p_socket_unix_init = (socket_unix_init_t)(ULONG_PTR)GetProcAddress(unixlib_mod, "socket_unix_init");
     if (!p_socket_unix_init || p_socket_unix_init(&unixlib_funcs))
@@ -61,12 +59,12 @@ BOOL CALLBACK socket_init_unixlib_once(PINIT_ONCE const init_once, PVOID const p
     return TRUE;
 }
 
-BOOL socket_init_unixlib(void)
+bool socket_init_unixlib(void)
 {
     return !!InitOnceExecuteOnce(&unixlib_initonce, socket_init_unixlib_once, 0, 0);
 }
 
-BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket_path, socket_data* const _socket)
+bool socket_prepare(logger_instance* const logger, char const* const unix_socket_path, socket_data* const _socket)
 {
     size_t socket_path_len;
     int error;
@@ -77,14 +75,14 @@ BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket
     if (socket_path_len > unixlib_funcs.get_max_path_length())
     {
         LOG_CRITICAL(logger, (_T("Socket path too long")));
-        return FALSE;
+        return false;
     }
 
     _socket->address = HeapAlloc(GetProcessHeap(), 0, unixlib_funcs.get_address_struct_size());
     if (!_socket->address)
     {
         LOG_CRITICAL(logger, (_T("Failed to allocate %lu bytes"), (unsigned long)unixlib_funcs.get_address_struct_size()));
-        return FALSE;
+        return false;
     }
     unixlib_funcs.init_address(_socket->address, unix_socket_path, socket_path_len);
 
@@ -93,7 +91,7 @@ BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket
     {
         LOG_CRITICAL(logger, (_T("Failed to create thread exit event: Error %d"), error));
         HeapFree(GetProcessHeap(), 0, _socket->address);
-        return FALSE;
+        return false;
     }
 
     error = unixlib_funcs.create(&_socket->fd);
@@ -102,15 +100,15 @@ BOOL socket_prepare(logger_instance* const logger, char const* const unix_socket
         LOG_CRITICAL(logger, (_T("Failed to create socket: Error %d"), error));
         unixlib_funcs.close_thread_exit_event(_socket->event);
         HeapFree(GetProcessHeap(), 0, _socket->address);
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Prepared socket")));
 
-    return TRUE;
+    return true;
 }
 
-BOOL socket_connect(logger_instance* const logger, socket_data* const socket)
+bool socket_connect(logger_instance* const logger, socket_data* const socket)
 {
     int error;
 
@@ -120,15 +118,15 @@ BOOL socket_connect(logger_instance* const logger, socket_data* const socket)
     if (error)
     {
         LOG_ERROR(logger, (_T("Failed to connect to socket: Error %d"), error));
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Connected socket")));
 
-    return TRUE;
+    return true;
 }
 
-BOOL socket_disconnect(logger_instance* const logger, socket_data* const socket)
+bool socket_disconnect(logger_instance* const logger, socket_data* const socket)
 {
     LOG_TRACE(logger, (_T("Closing socket")));
 
@@ -138,7 +136,7 @@ BOOL socket_disconnect(logger_instance* const logger, socket_data* const socket)
 
     LOG_TRACE(logger, (_T("Closed socket")));
 
-    return TRUE;
+    return true;
 }
 
 void socket_cleanup(logger_instance* const logger, connection_data* const conn)
@@ -161,16 +159,16 @@ void socket_cleanup(logger_instance* const logger, connection_data* const conn)
     LOG_TRACE(logger, (_T("Cleaned up after socket thread")));
 }
 
-BOOL socket_stop_thread(logger_instance* const logger, socket_data* const socket)
+bool socket_stop_thread(logger_instance* const logger, socket_data* const socket)
 {
-    BOOL ret = TRUE;
+    bool ret = true;
 
     LOG_TRACE(logger, (_T("Stopping socket thread")));
 
     if (unixlib_funcs.send_thread_exit_event(socket->event))
-        ret = FALSE;
+        ret = false;
     else if (!thread_wait(logger, &socket_thread_description, &socket->thread))
-        ret = FALSE;
+        ret = false;
 
     LOG_TRACE(logger, (_T("Stopped socket thread")));
 
@@ -187,8 +185,8 @@ typedef enum SOCKET_RECV_MSG_RET {
 } SOCKET_RECV_MSG_RET;
 
 static SOCKET_RECV_MSG_RET socket_receive_message(logger_instance* const logger, socket_data* const socket,
-                                           unsigned char** const inout_buffer, size_t* const inout_buffer_size,
-                                           size_t* const out_message_length)
+                                                  unsigned char** const inout_buffer, size_t* const inout_buffer_size,
+                                                  size_t* const out_message_length)
 {
     poll_status pstatus;
     int error;
@@ -231,7 +229,7 @@ static SOCKET_RECV_MSG_RET socket_receive_message(logger_instance* const logger,
             return SOCKET_RECV_MSG_RET_FAILURE;
     }
 
-    while (TRUE)
+    while (true)
     {
         size_t msg_len;
         recv_status rstatus;
@@ -278,17 +276,17 @@ static SOCKET_RECV_MSG_RET socket_receive_message(logger_instance* const logger,
     return SOCKET_RECV_MSG_RET_SUCCESS;
 }
 
-BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
+bool socket_handler(logger_instance* const logger, connection_data* const conn)
 {
     unsigned char* buffer;
     size_t buffer_size;
-    BOOL ret;
+    bool ret;
 
     LOG_TRACE(logger, (_T("Entering socket handler loop")));
 
     buffer = 0;
     buffer_size = 0;
-    while (TRUE)
+    while (true)
     {
         size_t message_length;
         SOCKET_RECV_MSG_RET recv_ret;
@@ -321,7 +319,7 @@ BOOL socket_handler(logger_instance* const logger, connection_data* const conn)
     return ret;
 }
 
-BOOL socket_send_message(logger_instance* const logger, socket_data* const socket, unsigned char const* const message,
+bool socket_send_message(logger_instance* const logger, socket_data* const socket, unsigned char const* const message,
                          size_t const message_length)
 {
     size_t bytes_written;
@@ -332,14 +330,14 @@ BOOL socket_send_message(logger_instance* const logger, socket_data* const socke
     if (InterlockedRead(&socket->thread.status) >= THREAD_STATUS_STOPPING)
     {
         LOG_ERROR(logger, (_T("Can't send message to closed socket")));
-        return FALSE;
+        return false;
     }
 
     error = unixlib_funcs.send(socket->fd, message, message_length, &bytes_written);
     if (error)
     {
         LOG_ERROR(logger, (_T("Error %d while writing to socket"), error));
-        return FALSE;
+        return false;
     }
     else if (bytes_written != message_length)
     {
@@ -350,10 +348,10 @@ BOOL socket_send_message(logger_instance* const logger, socket_data* const socke
             (unsigned long)bytes_written,
             (unsigned long)message_length
         ));
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Sent message to socket")));
 
-    return TRUE;
+    return true;
 }

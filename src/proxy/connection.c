@@ -22,7 +22,7 @@
 #include <winbase.h>
 #include <winnt.h>
 
-BOOL pipe_handler_thunk(logger_instance* const logger, void* const void_conn)
+bool pipe_handler_thunk(logger_instance* const logger, void* const void_conn)
 {
     return pipe_handler(logger, (connection_data*)void_conn);
 }
@@ -34,7 +34,7 @@ void pipe_cleanup_thunk(logger_instance* const logger, thread_data* const data, 
     pipe_cleanup(logger, (connection_data*)void_conn);
 }
 
-BOOL pipe_stop_thread_thunk(logger_instance* const logger, thread_data* const data)
+bool pipe_stop_thread_thunk(logger_instance* const logger, thread_data* const data)
 {
     return pipe_stop_thread(logger, container_of(data, pipe_data, thread));
 }
@@ -45,7 +45,7 @@ thread_description pipe_thread_description = {
     pipe_stop_thread_thunk
 };
 
-BOOL socket_handler_thunk(logger_instance* const logger, void* const void_conn)
+bool socket_handler_thunk(logger_instance* const logger, void* const void_conn)
 {
     return socket_handler(logger, (connection_data*)void_conn);
 }
@@ -57,7 +57,7 @@ void socket_cleanup_thunk(logger_instance* const logger, thread_data* const data
     socket_cleanup(logger, (connection_data*)void_conn);
 }
 
-BOOL socket_stop_thread_thunk(logger_instance* const logger, thread_data* const data)
+bool socket_stop_thread_thunk(logger_instance* const logger, thread_data* const data)
 {
     return socket_stop_thread(logger, container_of(data, socket_data, thread));
 }

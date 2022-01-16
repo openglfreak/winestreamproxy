@@ -27,7 +27,7 @@
 
 #define STARTING_BUFFER_SIZE 1024
 
-BOOL pipe_create_server(logger_instance* const logger, pipe_data* const pipe, TCHAR const* const pipe_path)
+bool pipe_create_server(logger_instance* const logger, pipe_data* const pipe, TCHAR const* const pipe_path)
 {
     LOG_TRACE(logger, (_T("Creating named pipe server %s"), pipe_path));
 
@@ -37,15 +37,15 @@ BOOL pipe_create_server(logger_instance* const logger, pipe_data* const pipe, TC
     if (pipe->handle == INVALID_HANDLE_VALUE)
     {
         LOG_CRITICAL(logger, (_T("Could not create named pipe %s: Error %d"), pipe_path, GetLastError()));
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Created named pipe server")));
 
-    return TRUE;
+    return true;
 }
 
-BOOL pipe_server_start_accept(logger_instance* const logger, pipe_data* const pipe, BOOL* const out_is_async,
+bool pipe_server_start_accept(logger_instance* const logger, pipe_data* const pipe, bool* const out_is_async,
                               OVERLAPPED* const inout_accept_overlapped)
 {
     DWORD last_error;
@@ -55,23 +55,23 @@ BOOL pipe_server_start_accept(logger_instance* const logger, pipe_data* const pi
     if (ConnectNamedPipe(pipe->handle, inout_accept_overlapped) != 0 ||
         (last_error = GetLastError()) == ERROR_PIPE_CONNECTED)
     {
-        *out_is_async = FALSE;
         LOG_TRACE(logger, (_T("Pipe connection finished synchronously")));
-        return TRUE;
+        *out_is_async = false;
+        return true;
     }
     else if (last_error == ERROR_IO_PENDING)
     {
-        *out_is_async = TRUE;
         LOG_TRACE(logger, (_T("Continuing waiting for pipe connection asynchronously")));
-        return TRUE;
+        *out_is_async = true;
+        return true;
     }
 
     LOG_CRITICAL(logger, (_T("Error %d while waiting for connection"), last_error));
 
-    return FALSE;
+    return false;
 }
 
-BOOL pipe_prepare(logger_instance* const logger, pipe_data* const pipe)
+bool pipe_prepare(logger_instance* const logger, pipe_data* const pipe)
 {
     LOG_TRACE(logger, (_T("Preparing pipe data")));
 
@@ -79,7 +79,7 @@ BOOL pipe_prepare(logger_instance* const logger, pipe_data* const pipe)
     if (!pipe->read_overlapped.hEvent)
     {
         LOG_CRITICAL(logger, (_T("Could not create a pipe read overlapped event: Error %d"), GetLastError()));
-        return FALSE;
+        return false;
     }
 
     pipe->write_overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -87,15 +87,15 @@ BOOL pipe_prepare(logger_instance* const logger, pipe_data* const pipe)
     {
         LOG_CRITICAL(logger, (_T("Could not create a pipe write overlapped event: Error %d"), GetLastError()));
         CloseHandle(pipe->write_overlapped.hEvent);
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Prepared pipe data")));
 
-    return TRUE;
+    return true;
 }
 
-BOOL pipe_server_wait_accept(logger_instance* const logger, pipe_data* const pipe, HANDLE const exit_event,
+bool pipe_server_wait_accept(logger_instance* const logger, pipe_data* const pipe, HANDLE const exit_event,
                              OVERLAPPED* const inout_accept_overlapped)
 {
     HANDLE wait_handles[2];
@@ -117,7 +117,7 @@ BOOL pipe_server_wait_accept(logger_instance* const logger, pipe_data* const pip
     {
         case WAIT_OBJECT_0:
             LOG_INFO(logger, (_T("Pipe client connected")));
-            return TRUE;
+            return true;
         case WAIT_OBJECT_0 + 1:
             LOG_TRACE(logger, (_T("Received exit signal")));
             break;
@@ -128,10 +128,10 @@ BOOL pipe_server_wait_accept(logger_instance* const logger, pipe_data* const pip
             LOG_ERROR(logger, (_T("Unexpected WaitForMultipleObjects return value: %d"), wait_result));
     }
 
-    return FALSE;
+    return false;
 }
 
-BOOL pipe_close_server(logger_instance* const logger, pipe_data* const pipe)
+bool pipe_close_server(logger_instance* const logger, pipe_data* const pipe)
 {
     LOG_TRACE(logger, (_T("Closing pipe server")));
 
@@ -147,7 +147,7 @@ BOOL pipe_close_server(logger_instance* const logger, pipe_data* const pipe)
 
     LOG_TRACE(logger, (_T("Closed pipe server")));
 
-    return TRUE;
+    return true;
 }
 
 void pipe_cleanup(logger_instance* const logger, connection_data* const conn)
@@ -170,16 +170,16 @@ void pipe_cleanup(logger_instance* const logger, connection_data* const conn)
     LOG_TRACE(logger, (_T("Cleaned up after pipe thread")));
 }
 
-BOOL pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
+bool pipe_stop_thread(logger_instance* const logger, pipe_data* const pipe)
 {
-    BOOL ret = TRUE;
+    bool ret = true;
 
     LOG_TRACE(logger, (_T("Stopping pipe thread")));
 
     if (!SetEvent(pipe->thread.trigger_event))
-        ret = FALSE;
+        ret = false;
     if (!thread_wait(logger, &pipe_thread_description, &pipe->thread))
-        ret = FALSE;
+        ret = false;
 
     LOG_TRACE(logger, (_T("Stopped pipe thread")));
 
@@ -221,9 +221,9 @@ static PIPE_RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pip
     wait_handles[1] = pipe->thread.trigger_event;
 
     message_length = 0;
-    pipe->read_is_overlapped = FALSE;
+    pipe->read_is_overlapped = false;
 
-    while (TRUE)
+    while (true)
     {
         BOOL success;
         DWORD last_error;
@@ -232,7 +232,7 @@ static PIPE_RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pip
         if (pipe->read_is_overlapped)
         {
             success = GetOverlappedResult(pipe->handle, &pipe->read_overlapped, &bytes_read, FALSE);
-            pipe->read_is_overlapped = FALSE;
+            pipe->read_is_overlapped = false;
         }
         else
         {
@@ -255,7 +255,7 @@ static PIPE_RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pip
             {
                 DWORD wait_result;
 
-                pipe->read_is_overlapped = TRUE;
+                pipe->read_is_overlapped = true;
 
                 do {
                     wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, INFINITE);
@@ -316,17 +316,17 @@ static PIPE_RECV_MSG_RET pipe_receive_message(logger_instance* const logger, pip
     return PIPE_RECV_MSG_RET_SUCCESS;
 }
 
-BOOL pipe_handler(logger_instance* const logger, connection_data* const conn)
+bool pipe_handler(logger_instance* const logger, connection_data* const conn)
 {
     unsigned char* buffer;
     size_t buffer_size;
-    BOOL ret;
+    bool ret;
 
     LOG_TRACE(logger, (_T("Entering pipe handler loop")));
 
     buffer = 0;
     buffer_size = 0;
-    while (TRUE)
+    while (true)
     {
         size_t message_length;
         PIPE_RECV_MSG_RET recv_ret;
@@ -359,7 +359,7 @@ BOOL pipe_handler(logger_instance* const logger, connection_data* const conn)
     return ret;
 }
 
-BOOL pipe_send_message(logger_instance* const logger, pipe_data* const pipe, unsigned char const* const message,
+bool pipe_send_message(logger_instance* const logger, pipe_data* const pipe, unsigned char const* const message,
                        size_t const message_length)
 {
     DWORD bytes_written;
@@ -369,7 +369,7 @@ BOOL pipe_send_message(logger_instance* const logger, pipe_data* const pipe, uns
     if (InterlockedRead(&pipe->thread.status) >= THREAD_STATUS_STOPPING)
     {
         LOG_ERROR(logger, (_T("Can't send message to closed pipe")));
-        return FALSE;
+        return false;
     }
 
     if ((DWORD)message_length != message_length)
@@ -379,7 +379,7 @@ BOOL pipe_send_message(logger_instance* const logger, pipe_data* const pipe, uns
             (unsigned long)message_length,
             (unsigned long)(DWORD)-1
         ));
-        return FALSE;
+        return false;
     }
 
     if (pipe->write_is_overlapped)
@@ -387,11 +387,11 @@ BOOL pipe_send_message(logger_instance* const logger, pipe_data* const pipe, uns
         BOOL prev_ret;
 
         prev_ret = GetOverlappedResult(pipe->handle, &pipe->write_overlapped, &bytes_written, FALSE);
-        pipe->write_is_overlapped = FALSE;
+        pipe->write_is_overlapped = false;
         if (!prev_ret)
         {
             LOG_ERROR(logger, (_T("Error in previous pipe write: Error %d"), GetLastError()));
-            return FALSE;
+            return false;
         }
     }
 
@@ -404,17 +404,17 @@ BOOL pipe_send_message(logger_instance* const logger, pipe_data* const pipe, uns
         {
             LOG_TRACE(logger, (_T("Continuing sending message to pipe client asynchronously")));
 
-            pipe->write_is_overlapped = TRUE;
-            return TRUE;
+            pipe->write_is_overlapped = true;
+            return true;
         }
         else if (last_error == ERROR_NO_DATA || last_error == ERROR_BROKEN_PIPE)
             LOG_ERROR(logger, (_T("Could not send data to pipe: Pipe disconnected")));
         else
             LOG_ERROR(logger, (_T("Sending message to pipe failed with error %d"), last_error));
-        return FALSE;
+        return false;
     }
 
     LOG_TRACE(logger, (_T("Sent message to pipe")));
 
-    return TRUE;
+    return true;
 }

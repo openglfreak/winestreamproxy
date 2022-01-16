@@ -14,6 +14,7 @@
 
 #include "data/connection_data.h"
 #include "data/socket_data.h"
+#include "../bool.h"
 #include <winestreamproxy/logger.h>
 
 #include <stddef.h>
@@ -22,17 +23,17 @@
 extern "C" {
 #endif /* defined(__cplusplus) */
 
-extern BOOL socket_init_unixlib(void);
+extern bool socket_init_unixlib(void);
 
-extern BOOL socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
-extern BOOL socket_connect(logger_instance* logger, socket_data* socket);
-extern BOOL socket_disconnect(logger_instance* logger, socket_data* socket);
+extern bool socket_prepare(logger_instance* logger, char const* unix_socket_path, socket_data* socket);
+extern bool socket_connect(logger_instance* logger, socket_data* socket);
+extern bool socket_disconnect(logger_instance* logger, socket_data* socket);
 extern void socket_cleanup(logger_instance* logger, connection_data* conn);
 
-extern BOOL socket_stop_thread(logger_instance* logger, socket_data* socket); /* Only called if thread is running. */
-extern BOOL socket_handler(logger_instance* logger, connection_data* conn);
+extern bool socket_stop_thread(logger_instance* logger, socket_data* socket); /* Only called if thread is running. */
+extern bool socket_handler(logger_instance* logger, connection_data* conn);
 
-extern BOOL socket_send_message(logger_instance* logger, socket_data* socket, unsigned char const* message,
+extern bool socket_send_message(logger_instance* logger, socket_data* socket, unsigned char const* message,
                                 size_t message_length);
 
 #ifdef __cplusplus
