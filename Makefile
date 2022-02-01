@@ -36,22 +36,35 @@ _include_stdarg = -include stdarg.h  # Work around Wine headers bug in 32-bit mo
 _CPPFLAGS = -DWIN32_LEAN_AND_MEAN=1 -DWINVER=0x0600 -D_WIN32_WINNT=0x0600 -DPSAPI_VERSION=2 $(CPPFLAGS)
 _RELEASE_CPPFLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 $(_CPPFLAGS) $(RELEASE_CPPFLAGS) -UNDEBUG -DNDEBUG=1
 _DEBUG_CPPFLAGS = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(_CPPFLAGS) $(DEBUG_CPPFLAGS) -UNDEBUG
+_RELEASE_CPPFLAGS_UNIX = $(_RELEASE_CPPFLAGS) $(RELEASE_CPPFLAGS_UNIX)
+_RELEASE_CPPFLAGS_PE = $(_RELEASE_CPPFLAGS) $(RELEASE_CPPFLAGS_PE)
+_DEBUG_CPPFLAGS_UNIX = $(_DEBUG_CPPFLAGS) $(DEBUG_CPPFLAGS_UNIX)
+_DEBUG_CPPFLAGS_PE = $(_DEBUG_CPPFLAGS) $(DEBUG_CPPFLAGS_PE)
 
 _WRCFLAGS = $(WRCFLAGS)
 _RELEASE_WRCFLAGS = $(RELEASE_WRCFLAGS)
 _DEBUG_WRCFLAGS = $(DEBUG_WRCFLAGS)
 
 _CFLAGS = -g3 -gdwarf-4 -fPIC -pie -Iinclude -Wall -Wextra -pedantic -pipe $(CFLAGS) $(_include_stdarg)
-_RELEASE_CFLAGS = -O2 -fomit-frame-pointer -fno-stack-protector -fuse-linker-plugin -fgraphite-identity \
+_RELEASE_CFLAGS = -O3 -fomit-frame-pointer -fno-stack-protector -fuse-linker-plugin -fgraphite-identity \
                   -floop-nest-optimize -fipa-pta -fno-semantic-interposition -fno-common -fdevirtualize-at-ltrans \
                   -fno-plt -fgcse-after-reload -fipa-cp-clone -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
                   -ffile-prefix-map="$${PWD:-$$(pwd)}"=. $(_CFLAGS) $(RELEASE_CFLAGS) -DNDEBUG=1
 _DEBUG_CFLAGS = -Og -std=gnu89 -Werror -Wno-long-long -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 $(_CFLAGS) $(DEBUG_CFLAGS) \
                 -UNDEBUG
+_RELEASE_CFLAGS_UNIX = $(_RELEASE_CFLAGS) -fuse-ld=gold $(RELEASE_CFLAGS_UNIX)
+_RELEASE_CFLAGS_PE = $(_RELEASE_CFLAGS) -fwhole-program -flto=auto -fuse-linker-plugin -flto-partition=one \
+                     $(RELEASE_CFLAGS_PE)
+_DEBUG_CFLAGS_UNIX = $(_DEBUG_CFLAGS) $(DEBUG_CFLAGS_UNIX)
+_DEBUG_CFLAGS_PE = $(_DEBUG_CFLAGS) $(DEBUG_CFLAGS_PE)
 
 _LDFLAGS = -mconsole $(LDFLAGS)
 _RELEASE_LDFLAGS = $(_LDFLAGS) $(RELEASE_LDFLAGS)
 _DEBUG_LDFLAGS = $(_LDFLAGS) $(DEBUG_LDFLAGS)
+_RELEASE_LDFLAGS_UNIX = $(_RELEASE_LDFLAGS) $(RELEASE_LDFLAGS_UNIX)
+_RELEASE_LDFLAGS_PE = $(_RELEASE_CFLAGS_PE) $(_RELEASE_LDFLAGS) $(RELEASE_LDFLAGS_PE)
+_DEBUG_LDFLAGS_UNIX = $(_DEBUG_LDFLAGS) $(DEBUG_LDFLAGS_UNIX)
+_DEBUG_LDFLAGS_PE = $(_DEBUG_LDFLAGS) $(DEBUG_LDFLAGS_PE)
 
 sources = src/logger/logger.c src/main/argparser.c src/main/double_spawn.c src/main/main.c src/main/misc.c \
           src/main/service.c src/main/standalone.c src/proxy/connection.c src/proxy/connection_list.c src/proxy/misc.c \
@@ -103,8 +116,8 @@ $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: 
         $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res $(spec_unixlib) \
         $(OBJ)/winestreamproxy_unixlib_unity_source.c Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) $(OBJ)/version.res \
-	           -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) \
+	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS_UNIX) $(_RELEASE_CFLAGS_UNIX) $(_RELEASE_LDFLAGS_UNIX) \
+	           $(OBJ)/version.res -shared -o $(OUT)/winestreamproxy_unixlib.dll.so $(spec_unixlib) \
 	           $(OBJ)/winestreamproxy_unixlib_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy_unixlib.dll.so
@@ -113,8 +126,9 @@ $(OUT)/winestreamproxy_unixlib.dll.so $(OUT)/winestreamproxy_unixlib.dll.dbg.o: 
 $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o: $(OUT)/.version $(OBJ)/version.h $(OBJ)/version.res \
                                                              $(OBJ)/winestreamproxy_unity_source.c Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS) $(_RELEASE_CFLAGS) $(_RELEASE_LDFLAGS) -mno-cygwin \
-	           -b $(CROSSTARGET) $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe $(OBJ)/winestreamproxy_unity_source.c
+	$(WINEGCC) -include $(OBJ)/version.h $(_RELEASE_CPPFLAGS_PE) $(_RELEASE_CFLAGS_PE) $(_RELEASE_LDFLAGS_PE) \
+	           -mno-cygwin -b $(CROSSTARGET) $(OBJ)/version.res -o $(OUT)/winestreamproxy.exe \
+	           $(OBJ)/winestreamproxy_unity_source.c
 	$(OBJCOPY) --only-keep-debug $(OUT)/winestreamproxy.exe $(OUT)/winestreamproxy.exe.dbg.o
 	$(STRIP) --strip-debug --strip-unneeded $(OUT)/winestreamproxy.exe
 	$(OBJCOPY) --add-gnu-debuglink=$(OUT)/winestreamproxy.exe.dbg.o $(OUT)/winestreamproxy.exe
@@ -131,14 +145,14 @@ $(OUT)/.version-debug: $(OBJ)/.version
 $(OUT)/winestreamproxy_unixlib-debug.dll.so: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res \
                                              $(spec_unixlib) $(sources_unixlib) $(headers_unixlib) Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) $(OBJ)/version-debug.res \
-	           -shared -o $(OUT)/winestreamproxy_unixlib-debug.dll.so $(spec_unixlib) \
+	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS_UNIX) $(_DEBUG_CFLAGS_UNIX) $(_DEBUG_LDFLAGS_UNIX) \
+	           $(OBJ)/version-debug.res -shared -o $(OUT)/winestreamproxy_unixlib-debug.dll.so $(spec_unixlib) \
 	           $(sources_unixlib)
 
 $(OUT)/winestreamproxy-debug.exe: $(OUT)/.version-debug $(OBJ)/version.h $(OBJ)/version-debug.res $(sources) $(headers) \
                                   Makefile
 	$(MKDIR) $(OUT)
-	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS) $(_DEBUG_CFLAGS) $(_DEBUG_LDFLAGS) -mno-cygwin \
+	$(WINEGCC) -include $(OBJ)/version.h $(_DEBUG_CPPFLAGS_PE) $(_DEBUG_CFLAGS_PE) $(_DEBUG_LDFLAGS_PE) -mno-cygwin \
 	           -b $(CROSSTARGET) $(OBJ)/version-debug.res -o $(OUT)/winestreamproxy-debug.exe $(sources)
 
 $(OUT)/settings.conf: scripts/settings.conf
