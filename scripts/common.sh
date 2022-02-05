@@ -51,7 +51,7 @@ settings_found=false
 load_settings_file() {
     if [ -e "$1" ]; then
         # shellcheck source=settings.conf
-        . "$1"
+        . "$1" || return
         settings_found=true
     fi
 }
