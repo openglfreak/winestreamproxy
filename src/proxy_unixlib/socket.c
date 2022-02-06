@@ -117,7 +117,8 @@ int SOCKUNIXAPI socket_poll(int const socket, thread_exit_event const event, pol
     fds[1].fd = event.fds[0];
     fds[1].events = POLLIN | POLLPRI | POLLHUP;
     fds[1].revents = 0;
-    while ((nfds = poll(fds, sizeof(fds) / sizeof(fds[0]), -1)) == 0 || errno == EAGAIN || errno == EINTR);
+    while ((nfds = poll(fds, sizeof(fds) / sizeof(fds[0]), -1)) == 0 ||
+           (nfds == -1 && (errno == EAGAIN || errno == EINTR)));
     if (nfds == -1)
         return errno ? errno : -1;
 
