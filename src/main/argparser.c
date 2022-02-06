@@ -68,7 +68,7 @@ static ARGPARSER_PARSE_RETURN parse_option_value(int const argc, TCHAR const* ar
         case ARGPARSER_OPTION_TYPE_STRING:
         {
             if (value_ptr)
-                *(TCHAR const**)out_value = value_ptr + 1;
+                *(TCHAR const**)out_value = value_ptr;
             else if (*arg_index + 1 < argc)
                 *(TCHAR const**)out_value = argv[++*arg_index];
             else
@@ -76,9 +76,9 @@ static ARGPARSER_PARSE_RETURN parse_option_value(int const argc, TCHAR const* ar
             break;
         }
         case ARGPARSER_OPTION_TYPE_BOOLEAN:
-            if (!value_ptr || _tcsicmp(value_ptr + 1, _T("true")) == 0)
+            if (!value_ptr || _tcsicmp(value_ptr, _T("true")) == 0)
                 *(int*)out_value = 1;
-            else if (value_ptr && _tcsicmp(value_ptr + 1, _T("false")) == 0)
+            else if (value_ptr && _tcsicmp(value_ptr, _T("false")) == 0)
                 *(int*)out_value = 0;
             else
             {
@@ -90,7 +90,7 @@ static ARGPARSER_PARSE_RETURN parse_option_value(int const argc, TCHAR const* ar
         {
             TCHAR const* str_val = 0;
             if (value_ptr)
-                str_val = value_ptr + 1;
+                str_val = value_ptr;
             else if (*arg_index + 1 < argc)
                 str_val = argv[++*arg_index];
             else
@@ -115,7 +115,7 @@ static ARGPARSER_PARSE_RETURN parse_option_value(int const argc, TCHAR const* ar
         {
             TCHAR const* str_val = 0;
             if (value_ptr)
-                str_val = value_ptr + 1;
+                str_val = value_ptr;
             else if (*arg_index + 1 < argc)
                 str_val = argv[++*arg_index];
             else
